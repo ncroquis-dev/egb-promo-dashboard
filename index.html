@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>크로스프로모션 유입경로 대시보드</title>
+    <style>
+      :root {
+        --bg: #f2f4f6;
+        --card: #ffffff;
+        --grey800: #191f28;
+        --grey600: #4e5968;
+        --grey400: #8b95a1;
+        --grey200: #e5e8eb;
+        --blue: #3182f6;
+        --green: #15b877;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: var(--bg);
+        color: var(--grey800);
+        padding: 20px;
+      }
+      .wrap { max-width: 760px; margin: 0 auto; }
+      h1 { font-size: 20px; margin: 0 0 4px; }
+      .sub { color: var(--grey400); font-size: 13px; margin-bottom: 16px; }
+      .card {
+        background: var(--card);
+        border-radius: 16px;
+        padding: 16px 18px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+        margin-bottom: 16px;
+      }
+      label { display: block; font-size: 12px; color: var(--grey600); margin: 8px 0 4px; }
+      input {
+        width: 100%; padding: 10px 12px; border: 1px solid var(--grey200);
+        border-radius: 10px; font-size: 14px;
+      }
+      .row { display: flex; gap: 10px; }
+      .row > div { flex: 1; }
+      button {
+        margin-top: 14px; width: 100%; padding: 12px; border: none;
+        border-radius: 12px; background: var(--blue); color: #fff;
+        font-weight: 700; font-size: 15px; cursor: pointer;
+      }
+      button:disabled { opacity: 0.5; cursor: default; }
+      .totals { display: flex; gap: 12px; }
+      .total {
+        flex: 1; text-align: center; padding: 16px; border-radius: 14px;
+        background: var(--bg);
+      }
+      .total .n { font-size: 28px; font-weight: 800; }
+      .total .l { font-size: 12px; color: var(--grey600); margin-top: 2px; }
+      h2 { font-size: 15px; margin: 4px 0 12px; }
+      .barrow { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+      .barrow .name { width: 40%; font-size: 13px; color: var(--grey600);
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .barrow .track { flex: 1; background: var(--grey200); border-radius: 6px; height: 18px; overflow: hidden; }
+      .barrow .fill { height: 100%; border-radius: 6px; }
+      .barrow .cnt { width: 44px; text-align: right; font-size: 13px; font-weight: 700; }
+      .daily { display: flex; align-items: flex-end; gap: 4px; height: 140px; overflow-x: auto; padding-top: 8px; }
+      .day { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 26px; }
+      .day .stack { display: flex; flex-direction: column-reverse; justify-content: flex-start; height: 110px; width: 18px; }
+      .day .seg { width: 100%; }
+      .day .d { font-size: 9px; color: var(--grey400); transform: rotate(-45deg); white-space: nowrap; }
+      .legend { display: flex; gap: 14px; font-size: 12px; color: var(--grey600); margin-top: 6px; }
+      .dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: middle; }
+      .empty { color: var(--grey400); font-size: 13px; }
+      .err { color: #f04452; font-size: 13px; white-space: pre-wrap; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>📊 크로스프로모션 유입경로</h1>
+      <div class="sub">promo_events 집계 (in=다른 앱→우리 앱 유입 · out=우리 배너→다른 앱 유출)</div>
+
+      <div class="card">
+        <label>Supabase URL (예: https://xxxx.supabase.co)</label>
+        <input id="url" placeholder="https://xxxx.supabase.co" value="https://mzlmmevngejeoqckfhdg.supabase.co" />
+        <div class="row">
+          <div>
+            <label>Anon Key</label>
+            <input id="anon" placeholder="eyJ..." />
+          </div>
+          <div>
+            <label>Admin Secret (ADMIN_SECRET)</label>
+            <input id="admin" type="password" placeholder="관리자 시크릿" />
+          </div>
+        </div>
+        <label>기간 (일)</label>
+        <input id="days" type="number" value="30" />
+        <button id="load">불러오기</button>
+        <div id="err" class="err"></div>
+      </div>
+
+      <div id="result" style="display: none">
+        <div class="card">
+          <div class="totals">
+            <div class="total"><div class="n" id="tIn">0</div><div class="l">유입 (in)</div></div>
+            <div class="total"><div class="n" id="tOut">0</div><div class="l">유출 (out)</div></div>
+          </div>
+        </div>
+        <div class="card">
+          <h2>유입 출처 (referrer/app 별)</h2>
+          <div id="inByApp"></div>
+        </div>
+        <div class="card">
+          <h2>유출 대상 (우리 배너로 나간 앱 별)</h2>
+          <div id="outByApp"></div>
+        </div>
+        <div class="card">
+          <h2>일자별 추이</h2>
+          <div class="daily" id="daily"></div>
+          <div class="legend">
+            <span><span class="dot" style="background: var(--green)"></span>유입</span>
+            <span><span class="dot" style="background: var(--blue)"></span>유출</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const LS = "egb_promo_dash";
+
+      // 저장된 접속정보 복원 (시크릿 포함 — 본인 로컬에만 저장돼요)
+      try {
+        const saved = JSON.parse(localStorage.getItem(LS) || "{}");
+        ["url", "anon", "admin", "days"].forEach((k) => {
+          if (saved[k] != null) $(k).value = saved[k];
+        });
+      } catch {}
+
+      function bars(el, list, color) {
+        el.innerHTML = "";
+        if (!list || list.length === 0) {
+          el.innerHTML = '<div class="empty">데이터 없음</div>';
+          return;
+        }
+        const max = Math.max(...list.map((x) => x.count), 1);
+        for (const x of list) {
+          const row = document.createElement("div");
+          row.className = "barrow";
+          const pct = Math.round((x.count / max) * 100);
+          row.innerHTML =
+            '<div class="name" title="' + x.app + '">' + x.app + "</div>" +
+            '<div class="track"><div class="fill" style="width:' + pct + "%;background:" + color + '"></div></div>' +
+            '<div class="cnt">' + x.count + "</div>";
+          el.appendChild(row);
+        }
+      }
+
+      function daily(el, list) {
+        el.innerHTML = "";
+        if (!list || list.length === 0) {
+          el.innerHTML = '<div class="empty">데이터 없음</div>';
+          return;
+        }
+        const max = Math.max(...list.map((x) => (x.in || 0) + (x.out || 0)), 1);
+        for (const x of list) {
+          const inH = Math.round(((x.in || 0) / max) * 110);
+          const outH = Math.round(((x.out || 0) / max) * 110);
+          const day = document.createElement("div");
+          day.className = "day";
+          day.innerHTML =
+            '<div class="stack">' +
+            '<div class="seg" style="height:' + inH + "px;background:var(--green)" + '"></div>' +
+            '<div class="seg" style="height:' + outH + "px;background:var(--blue)" + '"></div>' +
+            "</div>" +
+            '<div class="d">' + x.day.slice(5) + "</div>";
+          el.appendChild(day);
+        }
+      }
+
+      async function load() {
+        const url = $("url").value.trim().replace(/\/$/, "");
+        const anon = $("anon").value.trim();
+        const admin = $("admin").value.trim();
+        const days = Number($("days").value) || 30;
+        $("err").textContent = "";
+        localStorage.setItem(LS, JSON.stringify({ url, anon, admin, days }));
+
+        if (!url || !anon || !admin) {
+          $("err").textContent = "URL · Anon Key · Admin Secret 를 모두 입력해주세요.";
+          return;
+        }
+        $("load").disabled = true;
+        try {
+          const res = await fetch(url + "/functions/v1/keys", {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              apikey: anon,
+              authorization: "Bearer " + anon,
+              "x-admin-secret": admin,
+            },
+            body: JSON.stringify({ action: "promo_stats", days }),
+          });
+          const data = await res.json();
+          if (!res.ok || data.error) {
+            throw new Error((data && data.error) || "HTTP " + res.status);
+          }
+          $("tIn").textContent = data.totalIn ?? 0;
+          $("tOut").textContent = data.totalOut ?? 0;
+          bars($("inByApp"), data.inByApp, "var(--green)");
+          bars($("outByApp"), data.outByApp, "var(--blue)");
+          daily($("daily"), data.daily);
+          $("result").style.display = "block";
+        } catch (e) {
+          $("err").textContent = "불러오기 실패: " + (e && e.message ? e.message : e);
+        } finally {
+          $("load").disabled = false;
+        }
+      }
+
+      $("load").addEventListener("click", load);
+    </script>
+  </body>
+</html>
