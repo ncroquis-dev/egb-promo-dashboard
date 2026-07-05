@@ -94,6 +94,10 @@
             <div class="kpi"><div class="n" id="kAvgOpen">0</div><div class="l">유저당 평균 오픈</div></div>
             <div class="kpi"><div class="n" id="kAvgVal">0</div><div class="l">유저당 보석 가치</div><div class="s">(꺼낸 총액)</div></div>
           </div>
+          <div class="kpis" style="margin-top: 12px">
+            <div class="kpi"><div class="n" id="kMaxOpen">0</div><div class="l">최다 오픈 유저</div><div class="s">(총 오픈수)</div></div>
+            <div class="kpi"><div class="n" id="kMaxDaily">0</div><div class="l">└ 그 유저 일 평균</div><div class="s">(오픈수/활동일)</div></div>
+          </div>
         </div>
 
         <!-- 보석 등급별 -->
@@ -267,6 +271,8 @@
           $("kUsers").textContent = (d.users ?? 0).toLocaleString();
           $("kAvgOpen").textContent = d.avgOpensPerUser ?? 0;
           $("kAvgVal").textContent = won(d.avgValuePerUser) + "원";
+          $("kMaxOpen").textContent = (d.maxUserOpens ?? 0).toLocaleString();
+          $("kMaxDaily").textContent = d.maxUserDailyOpens ?? 0;
 
           // 등급별
           gradeBars($("grades"), d.drawnByGrade || {});
