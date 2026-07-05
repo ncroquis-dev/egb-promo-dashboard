@@ -103,7 +103,11 @@
         <!-- 보석 등급별 -->
         <div class="card">
           <h2>💠 등급별 꺼낸 보석 수</h2>
-          <div class="note">※ 집계 시작(오늘) 이후 누적. 과거는 소급 불가.</div>
+          <div style="font-size: 13px; color: var(--grey600); margin-bottom: 8px">
+            보석당 평균 가치 <b id="avgGem">0원</b>
+            <span style="color: var(--grey400)">(전체 기간 · 총획득÷총개수)</span>
+          </div>
+          <div class="note">※ 아래 등급별 개수는 집계 시작(오늘) 이후 누적. 과거는 소급 불가.</div>
           <div id="grades"></div>
         </div>
 
@@ -274,7 +278,10 @@
           $("kMaxOpen").textContent = (d.maxUserOpens ?? 0).toLocaleString();
           $("kMaxDaily").textContent = d.maxUserDailyOpens ?? 0;
 
-          // 등급별
+          // 등급별 + 보석당 평균 가치(전체 기간)
+          const tdc = Number(d.totalDrawnCount) || 0;
+          const avgGem = tdc ? Number(d.totalDrawnValue) / tdc : 0;
+          $("avgGem").textContent = avgGem.toFixed(2) + "원";
           gradeBars($("grades"), d.drawnByGrade || {});
 
           // 포인트 흐름
