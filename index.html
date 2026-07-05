@@ -91,7 +91,7 @@
           <h2>👥 개요</h2>
           <div class="kpis">
             <div class="kpi"><div class="n" id="kUsers">0</div><div class="l">유저 수</div></div>
-            <div class="kpi"><div class="n" id="kAvgOpen">0</div><div class="l">유저당 평균 오픈</div></div>
+            <div class="kpi"><div class="n" id="kAvgOpen">0</div><div class="l">유저당 평균 오픈</div><div class="s" id="kAvgDaily">일 평균 0</div></div>
             <div class="kpi"><div class="n" id="kAvgVal">0</div><div class="l">유저당 보석 가치</div><div class="s">(꺼낸 총액)</div></div>
           </div>
           <div class="kpis" style="margin-top: 12px">
@@ -274,6 +274,7 @@
           // 개요
           $("kUsers").textContent = (d.users ?? 0).toLocaleString();
           $("kAvgOpen").textContent = d.avgOpensPerUser ?? 0;
+          $("kAvgDaily").textContent = "일 평균 " + (d.avgDailyOpensPerUser ?? 0);
           $("kAvgVal").textContent = won(d.avgValuePerUser) + "원";
           $("kMaxOpen").textContent = (d.maxUserOpens ?? 0).toLocaleString();
           $("kMaxDaily").textContent = d.maxUserDailyOpens ?? 0;
