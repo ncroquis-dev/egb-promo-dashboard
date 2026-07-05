@@ -108,9 +108,9 @@
           <h2>💰 포인트 흐름 (꺼낸 보석 = 출금 + 가방 + 소모)</h2>
           <div class="flowbar" id="flowbar"></div>
           <div class="flowleg">
-            <span><span class="dot" style="background: var(--green)"></span>출금 <b id="fW">0</b>원</span>
-            <span><span class="dot" style="background: var(--blue)"></span>미출금 가방 <b id="fB">0</b>원</span>
-            <span><span class="dot" style="background: var(--amber)"></span>소모 <b id="fC">0</b>원</span>
+            <span><span class="dot" style="background: var(--green)"></span>출금 <b id="fW">0</b></span>
+            <span><span class="dot" style="background: var(--blue)"></span>미출금 가방 <b id="fB">0</b></span>
+            <span><span class="dot" style="background: var(--amber)"></span>소모 <b id="fC">0</b></span>
             <span>= 총 획득 <b id="fT">0</b>원</span>
           </div>
         </div>
@@ -204,12 +204,15 @@
 
       function flow(w, b, c) {
         const t = w + b + c || 1;
+        const pc = (v) => ((v / t) * 100).toFixed(1);
         const seg = (v, col) =>
           '<div class="seg" style="width:' + (v / t) * 100 + "%;background:" + col + '"></div>';
         $("flowbar").innerHTML =
           seg(w, "var(--green)") + seg(b, "var(--blue)") + seg(c, "var(--amber)");
-        $("fW").textContent = won(w); $("fB").textContent = won(b);
-        $("fC").textContent = won(c); $("fT").textContent = won(w + b + c);
+        $("fW").textContent = won(w) + "원 · " + pc(w) + "%";
+        $("fB").textContent = won(b) + "원 · " + pc(b) + "%";
+        $("fC").textContent = won(c) + "원 · " + pc(c) + "%";
+        $("fT").textContent = won(w + b + c);
       }
 
       function daily(el, list) {
