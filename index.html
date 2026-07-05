@@ -3,115 +3,142 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>크로스프로모션 유입경로 대시보드</title>
+    <title>무한의 보석상자 · 종합 대시보드</title>
     <style>
       :root {
-        --bg: #f2f4f6;
-        --card: #ffffff;
-        --grey800: #191f28;
-        --grey600: #4e5968;
-        --grey400: #8b95a1;
-        --grey200: #e5e8eb;
-        --blue: #3182f6;
-        --green: #15b877;
+        --bg: #f2f4f6; --card: #ffffff; --grey800: #191f28; --grey600: #4e5968;
+        --grey400: #8b95a1; --grey200: #e5e8eb; --blue: #3182f6; --green: #15b877;
+        --red: #f04452; --amber: #f59e0b;
       }
       * { box-sizing: border-box; }
       body {
-        margin: 0;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        background: var(--bg);
-        color: var(--grey800);
-        padding: 20px;
+        margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: var(--bg); color: var(--grey800); padding: 20px;
       }
-      .wrap { max-width: 760px; margin: 0 auto; }
+      .wrap { max-width: 820px; margin: 0 auto; }
       h1 { font-size: 20px; margin: 0 0 4px; }
       .sub { color: var(--grey400); font-size: 13px; margin-bottom: 16px; }
       .card {
-        background: var(--card);
-        border-radius: 16px;
-        padding: 16px 18px;
-        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-        margin-bottom: 16px;
+        background: var(--card); border-radius: 16px; padding: 16px 18px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06); margin-bottom: 16px;
       }
       label { display: block; font-size: 12px; color: var(--grey600); margin: 8px 0 4px; }
       input {
         width: 100%; padding: 10px 12px; border: 1px solid var(--grey200);
         border-radius: 10px; font-size: 14px;
       }
-      .row { display: flex; gap: 10px; }
-      .row > div { flex: 1; }
+      .row { display: flex; gap: 10px; flex-wrap: wrap; }
+      .row > div { flex: 1; min-width: 140px; }
       button {
         margin-top: 14px; width: 100%; padding: 12px; border: none;
         border-radius: 12px; background: var(--blue); color: #fff;
         font-weight: 700; font-size: 15px; cursor: pointer;
       }
       button:disabled { opacity: 0.5; cursor: default; }
-      .totals { display: flex; gap: 12px; }
-      .total {
-        flex: 1; text-align: center; padding: 16px; border-radius: 14px;
-        background: var(--bg);
-      }
-      .total .n { font-size: 28px; font-weight: 800; }
-      .total .l { font-size: 12px; color: var(--grey600); margin-top: 2px; }
       h2 { font-size: 15px; margin: 4px 0 12px; }
+      .note { font-size: 11px; color: var(--grey400); margin: -6px 0 10px; }
+      .kpis { display: flex; gap: 12px; flex-wrap: wrap; }
+      .kpi { flex: 1; min-width: 120px; text-align: center; padding: 16px 10px;
+        border-radius: 14px; background: var(--bg); }
+      .kpi .n { font-size: 24px; font-weight: 800; }
+      .kpi .l { font-size: 12px; color: var(--grey600); margin-top: 3px; }
+      .kpi .s { font-size: 11px; color: var(--grey400); }
       .barrow { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-      .barrow .name { width: 40%; font-size: 13px; color: var(--grey600);
+      .barrow .name { width: 34%; font-size: 13px; color: var(--grey600);
         white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .barrow .track { flex: 1; background: var(--grey200); border-radius: 6px; height: 18px; overflow: hidden; }
       .barrow .fill { height: 100%; border-radius: 6px; }
-      .barrow .cnt { width: 44px; text-align: right; font-size: 13px; font-weight: 700; }
+      .barrow .cnt { width: 80px; text-align: right; font-size: 13px; font-weight: 700; }
+      .flowbar { display: flex; height: 26px; border-radius: 8px; overflow: hidden; margin: 8px 0; }
+      .flowbar .seg { height: 100%; }
+      .flowleg { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--grey600); }
+      .dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: middle; }
+      .pnl { font-size: 15px; font-weight: 800; }
+      .pos { color: var(--green); } .neg { color: var(--red); }
       .daily { display: flex; align-items: flex-end; gap: 4px; height: 140px; overflow-x: auto; padding-top: 8px; }
       .day { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 26px; }
-      .day .stack { display: flex; flex-direction: column-reverse; justify-content: flex-start; height: 110px; width: 18px; }
+      .day .stack { display: flex; flex-direction: column-reverse; height: 110px; width: 18px; }
       .day .seg { width: 100%; }
       .day .d { font-size: 9px; color: var(--grey400); transform: rotate(-45deg); white-space: nowrap; }
       .legend { display: flex; gap: 14px; font-size: 12px; color: var(--grey600); margin-top: 6px; }
-      .dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: middle; }
       .empty { color: var(--grey400); font-size: 13px; }
-      .err { color: #f04452; font-size: 13px; white-space: pre-wrap; }
+      .err { color: var(--red); font-size: 13px; white-space: pre-wrap; }
     </style>
   </head>
   <body>
     <div class="wrap">
-      <h1>📊 크로스프로모션 유입경로</h1>
-      <div class="sub">promo_events 집계 (in=다른 앱→우리 앱 유입 · out=우리 배너→다른 앱 유출)</div>
+      <h1>💎 무한의 보석상자 · 종합 대시보드</h1>
+      <div class="sub">유저 · 보석 · 포인트 흐름 · 수익 분석 · 크로스프로모션</div>
 
       <div class="card">
-        <label>Supabase URL (예: https://xxxx.supabase.co)</label>
-        <input id="url" placeholder="https://xxxx.supabase.co" value="https://mzlmmevngejeoqckfhdg.supabase.co" />
+        <label>Supabase URL</label>
+        <input id="url" placeholder="https://xxxx.supabase.co" />
         <div class="row">
-          <div>
-            <label>Anon Key</label>
-            <input id="anon" placeholder="eyJ..." />
-          </div>
-          <div>
-            <label>Admin Secret (ADMIN_SECRET)</label>
-            <input id="admin" type="password" placeholder="관리자 시크릿" />
-          </div>
+          <div><label>Anon Key</label><input id="anon" placeholder="eyJ..." /></div>
+          <div><label>Admin Secret</label><input id="admin" type="password" placeholder="관리자 시크릿" /></div>
         </div>
-        <label>기간 (일)</label>
-        <input id="days" type="number" value="30" />
+        <div class="row">
+          <div><label>eCPM (원, 수익 추정용)</label><input id="ecpm" type="number" value="528" /></div>
+          <div><label>크로스프로모션 기간(일)</label><input id="days" type="number" value="30" /></div>
+        </div>
         <button id="load">불러오기</button>
         <div id="err" class="err"></div>
       </div>
 
       <div id="result" style="display: none">
+        <!-- 개요 -->
         <div class="card">
-          <div class="totals">
-            <div class="total"><div class="n" id="tIn">0</div><div class="l">유입 (in)</div></div>
-            <div class="total"><div class="n" id="tOut">0</div><div class="l">유출 (out)</div></div>
+          <h2>👥 개요</h2>
+          <div class="kpis">
+            <div class="kpi"><div class="n" id="kUsers">0</div><div class="l">유저 수</div></div>
+            <div class="kpi"><div class="n" id="kAvgOpen">0</div><div class="l">유저당 평균 오픈</div></div>
+            <div class="kpi"><div class="n" id="kAvgVal">0</div><div class="l">유저당 보석 가치</div><div class="s">(꺼낸 총액)</div></div>
           </div>
         </div>
+
+        <!-- 보석 등급별 -->
         <div class="card">
-          <h2>유입 출처 (referrer/app 별)</h2>
-          <div id="inByApp"></div>
+          <h2>💠 등급별 꺼낸 보석 수</h2>
+          <div class="note">※ 집계 시작(오늘) 이후 누적. 과거는 소급 불가.</div>
+          <div id="grades"></div>
         </div>
+
+        <!-- 포인트 흐름 -->
         <div class="card">
-          <h2>유출 대상 (우리 배너로 나간 앱 별)</h2>
-          <div id="outByApp"></div>
+          <h2>💰 포인트 흐름 (꺼낸 보석 = 출금 + 가방 + 소모)</h2>
+          <div class="flowbar" id="flowbar"></div>
+          <div class="flowleg">
+            <span><span class="dot" style="background: var(--green)"></span>출금 <b id="fW">0</b>원</span>
+            <span><span class="dot" style="background: var(--blue)"></span>미출금 가방 <b id="fB">0</b>원</span>
+            <span><span class="dot" style="background: var(--amber)"></span>소모 <b id="fC">0</b>원</span>
+            <span>= 총 획득 <b id="fT">0</b>원</span>
+          </div>
         </div>
+
+        <!-- 수익 분석 -->
         <div class="card">
-          <h2>일자별 추이</h2>
+          <h2>📈 수익 분석 (eCPM 기준)</h2>
+          <div class="kpis">
+            <div class="kpi"><div class="n" id="rOpens">0</div><div class="l">총 오픈(=광고)</div></div>
+            <div class="kpi"><div class="n" id="rRev">0</div><div class="l">광고수익 추정(원)</div></div>
+            <div class="kpi"><div class="n" id="rPay">0</div><div class="l">지급(출금, 원)</div></div>
+          </div>
+          <div style="margin-top: 14px; text-align: center">
+            <span class="pnl" id="rNet">순손익 0원</span>
+            <div class="s" id="rPerView" style="font-size: 12px; color: var(--grey400)"></div>
+          </div>
+        </div>
+
+        <!-- 크로스프로모션 -->
+        <div class="card">
+          <h2>🔀 크로스프로모션</h2>
+          <div class="kpis" style="margin-bottom: 12px">
+            <div class="kpi"><div class="n" id="tIn" style="color: var(--green)">0</div><div class="l">유입 (in)</div></div>
+            <div class="kpi"><div class="n" id="tOut" style="color: var(--blue)">0</div><div class="l">유출 (out)</div></div>
+          </div>
+          <h2>유입 출처</h2><div id="inByApp"></div>
+          <h2 style="margin-top: 14px">유출 대상</h2><div id="outByApp"></div>
+          <h2 style="margin-top: 14px">일자별 추이</h2>
           <div class="daily" id="daily"></div>
           <div class="legend">
             <span><span class="dot" style="background: var(--green)"></span>유입</span>
@@ -123,22 +150,26 @@
 
     <script>
       const $ = (id) => document.getElementById(id);
-      const LS = "egb_promo_dash";
+      const LS = "egb_dash";
+      const won = (n) => (Math.round(Number(n) || 0)).toLocaleString();
+      const GRADES = [
+        { k: "bronze", name: "동화 (1원)", c: "#cd7f32" },
+        { k: "silver", name: "은화 (2원)", c: "#9ca3af" },
+        { k: "gold", name: "금화 (3원)", c: "#f59e0b" },
+        { k: "platinum", name: "백금 (5원)", c: "#60a5fa" },
+        { k: "diamond", name: "다이아 (10원)", c: "#22d3ee" },
+      ];
 
-      // 저장된 접속정보 복원 (시크릿 포함 — 본인 로컬에만 저장돼요)
       try {
-        const saved = JSON.parse(localStorage.getItem(LS) || "{}");
-        ["url", "anon", "admin", "days"].forEach((k) => {
-          if (saved[k] != null) $(k).value = saved[k];
+        const s = JSON.parse(localStorage.getItem(LS) || "{}");
+        ["url", "anon", "admin", "ecpm", "days"].forEach((k) => {
+          if (s[k] != null) $(k).value = s[k];
         });
       } catch {}
 
       function bars(el, list, color) {
         el.innerHTML = "";
-        if (!list || list.length === 0) {
-          el.innerHTML = '<div class="empty">데이터 없음</div>';
-          return;
-        }
+        if (!list || list.length === 0) { el.innerHTML = '<div class="empty">데이터 없음</div>'; return; }
         const max = Math.max(...list.map((x) => x.count), 1);
         for (const x of list) {
           const row = document.createElement("div");
@@ -152,12 +183,38 @@
         }
       }
 
+      function gradeBars(el, byGrade) {
+        el.innerHTML = "";
+        const total = GRADES.reduce((s, g) => s + (Number(byGrade[g.k]) || 0), 0);
+        if (total === 0) { el.innerHTML = '<div class="empty">아직 집계된 데이터 없음</div>'; return; }
+        const max = Math.max(...GRADES.map((g) => Number(byGrade[g.k]) || 0), 1);
+        for (const g of GRADES) {
+          const cnt = Number(byGrade[g.k]) || 0;
+          const pct = Math.round((cnt / max) * 100);
+          const share = ((cnt / total) * 100).toFixed(1);
+          const row = document.createElement("div");
+          row.className = "barrow";
+          row.innerHTML =
+            '<div class="name">' + g.name + "</div>" +
+            '<div class="track"><div class="fill" style="width:' + pct + "%;background:" + g.c + '"></div></div>' +
+            '<div class="cnt">' + cnt.toLocaleString() + " · " + share + "%</div>";
+          el.appendChild(row);
+        }
+      }
+
+      function flow(w, b, c) {
+        const t = w + b + c || 1;
+        const seg = (v, col) =>
+          '<div class="seg" style="width:' + (v / t) * 100 + "%;background:" + col + '"></div>';
+        $("flowbar").innerHTML =
+          seg(w, "var(--green)") + seg(b, "var(--blue)") + seg(c, "var(--amber)");
+        $("fW").textContent = won(w); $("fB").textContent = won(b);
+        $("fC").textContent = won(c); $("fT").textContent = won(w + b + c);
+      }
+
       function daily(el, list) {
         el.innerHTML = "";
-        if (!list || list.length === 0) {
-          el.innerHTML = '<div class="empty">데이터 없음</div>';
-          return;
-        }
+        if (!list || list.length === 0) { el.innerHTML = '<div class="empty">데이터 없음</div>'; return; }
         const max = Math.max(...list.map((x) => (x.in || 0) + (x.out || 0)), 1);
         for (const x of list) {
           const inH = Math.round(((x.in || 0) / max) * 110);
@@ -168,45 +225,74 @@
             '<div class="stack">' +
             '<div class="seg" style="height:' + inH + "px;background:var(--green)" + '"></div>' +
             '<div class="seg" style="height:' + outH + "px;background:var(--blue)" + '"></div>' +
-            "</div>" +
-            '<div class="d">' + x.day.slice(5) + "</div>";
+            '</div><div class="d">' + x.day.slice(5) + "</div>";
           el.appendChild(day);
         }
+      }
+
+      async function callAction(url, anon, admin, body) {
+        const res = await fetch(url + "/functions/v1/keys", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json", apikey: anon,
+            authorization: "Bearer " + anon, "x-admin-secret": admin,
+          },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (!res.ok || (data && data.error)) throw new Error((data && data.error) || "HTTP " + res.status);
+        return data;
       }
 
       async function load() {
         const url = $("url").value.trim().replace(/\/$/, "");
         const anon = $("anon").value.trim();
         const admin = $("admin").value.trim();
+        const ecpm = Number($("ecpm").value) || 0;
         const days = Number($("days").value) || 30;
         $("err").textContent = "";
-        localStorage.setItem(LS, JSON.stringify({ url, anon, admin, days }));
-
-        if (!url || !anon || !admin) {
-          $("err").textContent = "URL · Anon Key · Admin Secret 를 모두 입력해주세요.";
-          return;
-        }
+        localStorage.setItem(LS, JSON.stringify({ url, anon, admin, ecpm, days }));
+        if (!url || !anon || !admin) { $("err").textContent = "URL · Anon Key · Admin Secret 를 입력해주세요."; return; }
         $("load").disabled = true;
         try {
-          const res = await fetch(url + "/functions/v1/keys", {
-            method: "POST",
-            headers: {
-              "content-type": "application/json",
-              apikey: anon,
-              authorization: "Bearer " + anon,
-              "x-admin-secret": admin,
-            },
-            body: JSON.stringify({ action: "promo_stats", days }),
-          });
-          const data = await res.json();
-          if (!res.ok || data.error) {
-            throw new Error((data && data.error) || "HTTP " + res.status);
-          }
-          $("tIn").textContent = data.totalIn ?? 0;
-          $("tOut").textContent = data.totalOut ?? 0;
-          bars($("inByApp"), data.inByApp, "var(--green)");
-          bars($("outByApp"), data.outByApp, "var(--blue)");
-          daily($("daily"), data.daily);
+          const [d, p] = await Promise.all([
+            callAction(url, anon, admin, { action: "dashboard_stats" }),
+            callAction(url, anon, admin, { action: "promo_stats", days }),
+          ]);
+
+          // 개요
+          $("kUsers").textContent = (d.users ?? 0).toLocaleString();
+          $("kAvgOpen").textContent = d.avgOpensPerUser ?? 0;
+          $("kAvgVal").textContent = won(d.avgValuePerUser) + "원";
+
+          // 등급별
+          gradeBars($("grades"), d.drawnByGrade || {});
+
+          // 포인트 흐름
+          flow(Number(d.withdrawnPoints) || 0, Number(d.bagValue) || 0, Number(d.consumedPoints) || 0);
+
+          // 수익 분석
+          const opens = Number(d.totalDrawnCount) || 0;
+          const rev = Math.round((opens * ecpm) / 1000);
+          const pay = Number(d.withdrawnPoints) || 0;
+          const net = rev - pay;
+          $("rOpens").textContent = opens.toLocaleString();
+          $("rRev").textContent = won(rev);
+          $("rPay").textContent = won(pay);
+          const nn = $("rNet");
+          nn.textContent = "순손익 " + won(net) + "원 (광고수익 − 출금)";
+          nn.className = "pnl " + (net >= 0 ? "pos" : "neg");
+          $("rPerView").textContent = opens
+            ? "뷰당 " + (net / opens).toFixed(2) + "원 · (미출금 가방까지 다 나가면 최대 지급 " + won(d.totalDrawnValue) + "원)"
+            : "";
+
+          // 크로스프로모션
+          $("tIn").textContent = p.totalIn ?? 0;
+          $("tOut").textContent = p.totalOut ?? 0;
+          bars($("inByApp"), p.inByApp, "var(--green)");
+          bars($("outByApp"), p.outByApp, "var(--blue)");
+          daily($("daily"), p.daily);
+
           $("result").style.display = "block";
         } catch (e) {
           $("err").textContent = "불러오기 실패: " + (e && e.message ? e.message : e);
