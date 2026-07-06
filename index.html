@@ -117,7 +117,11 @@
             <div class="kpi"><div class="n" id="rcPerUser">0</div><div class="l">유저당 소모</div><div class="s">(원)</div></div>
             <div class="kpi"><div class="n" id="rcVsWithdraw">0%</div><div class="l">출금 대비 회수</div><div class="s">(소모÷출금)</div></div>
           </div>
-          <div class="note" style="margin-top: 10px">※ 소모는 집계 시작(오늘) 이후 누적. 스위치·업그레이드 활성화 후 쌓여요.</div>
+          <div style="margin-top: 14px; font-size: 13px; color: var(--grey600)">
+            카테고리별 <span style="color: var(--grey400)">(전체 기간 · 현재 레벨 역산)</span>
+          </div>
+          <div id="recoupTypes" style="margin-top: 8px"></div>
+          <div class="note" style="margin-top: 8px">※ 위 요약 지표(소모 포인트 등)는 집계 시작 이후. 아래 카테고리별은 현재 레벨로 역산한 전체 기간 값.</div>
         </div>
 
         <!-- 보석 등급별 -->
@@ -239,6 +243,32 @@
         }
       }
 
+      function recoupTypes(rc, users) {
+        const CATS = [
+          { k: "keycap", name: "🔑 최대 열쇠" },
+          { k: "bag", name: "🎒 가방 확장" },
+          { k: "daily", name: "📅 하루 상한" },
+          { k: "chest", name: "🎁 상자 등급" },
+        ];
+        const el = $("recoupTypes");
+        el.innerHTML = "";
+        for (const c of CATS) {
+          const o = rc[c.k] || {};
+          const u = Number(o.users) || 0;
+          const spent = Number(o.spent) || 0;
+          const pct = users ? (u / users) * 100 : 0;
+          const avg = u ? spent / u : 0;
+          const row = document.createElement("div");
+          row.style.cssText =
+            "display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-top:1px solid var(--grey200);font-size:13px";
+          row.innerHTML =
+            '<span style="color:var(--grey700)">' + c.name + "</span>" +
+            '<span style="color:var(--grey600)"><b>' + u + "명</b> (" +
+            pct.toFixed(1) + "%) · 평균 <b>" + won(avg) + "원</b></span>";
+          el.appendChild(row);
+        }
+      }
+
       function flow(w, b, c) {
         const t = w + b + c || 1;
         const pc = (v) => ((v / t) * 100).toFixed(1);
@@ -327,6 +357,7 @@
           $("rcPerUser").textContent = won(users ? cons / users : 0) + "원";
           $("rcVsWithdraw").textContent =
             (wd ? (cons / wd) * 100 : 0).toFixed(2) + "%";
+          recoupTypes(d.recoupByType || {}, users);
 
           // 등급별 + 보석당 평균 가치(전체 기간)
           const tdc = Number(d.totalDrawnCount) || 0;
