@@ -357,14 +357,16 @@
           const u = Number(o.users) || 0;
           const spent = Number(o.spent) || 0;
           const pct = users ? (u / users) * 100 : 0;
-          const avg = u ? spent / u : 0;
+          const avgUser = u ? spent / u : 0; // 쓴 사람 평균
+          const avgAll = users ? spent / users : 0; // 전체 유저 평균
           const row = document.createElement("div");
           row.style.cssText =
             "display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-top:1px solid var(--grey200);font-size:13px";
           row.innerHTML =
-            '<span style="color:var(--grey700)">' + c.name + "</span>" +
-            '<span style="color:var(--grey600)"><b>' + u + "명</b> (" +
-            pct.toFixed(1) + "%) · 평균 <b>" + won(avg) + "원</b></span>";
+            '<span style="color:var(--grey700)">' + c.name +
+            ' <span style="color:var(--grey400)">' + u + "명·" + pct.toFixed(1) + "%</span></span>" +
+            '<span style="color:var(--grey600)">쓴사람 <b>' + won(avgUser) +
+            "원</b> · 전체 <b>" + won(avgAll) + "원</b></span>";
           el.appendChild(row);
         }
       }
