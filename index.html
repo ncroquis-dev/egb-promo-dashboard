@@ -140,6 +140,15 @@
             <span><span class="dot" style="background: var(--amber)"></span>소모 <b id="fC">0</b></span>
             <span>= 총 획득 <b id="fT">0</b>원</span>
           </div>
+          <div
+            style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--grey200); font-size: 12px; color: var(--grey600); display: flex; gap: 16px; flex-wrap: wrap"
+          >
+            <span style="color: var(--grey400)">소모 내역 →</span>
+            <span>🔑 최대 열쇠 <b id="cKeycap">0원</b></span>
+            <span>🎒 가방 확장 <b id="cBag">0원</b></span>
+            <span>📅 하루 상한 <b id="cDaily">0원</b></span>
+            <span>🎁 상자 등급 <b id="cChest">0원</b></span>
+          </div>
         </div>
 
         <!-- 수익 분석 -->
@@ -319,6 +328,12 @@
 
           // 포인트 흐름
           flow(Number(d.withdrawnPoints) || 0, Number(d.bagValue) || 0, Number(d.consumedPoints) || 0);
+          // 소모 종류별 내역
+          const ct = d.consumedByType || {};
+          $("cKeycap").textContent = won(ct.keycap) + "원";
+          $("cBag").textContent = won(ct.bag) + "원";
+          $("cDaily").textContent = won(ct.daily) + "원";
+          $("cChest").textContent = won(ct.chest) + "원";
 
           // 수익 분석
           const opens = Number(d.totalDrawnCount) || 0;
