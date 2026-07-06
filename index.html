@@ -131,7 +131,7 @@
             <span style="color: var(--grey400)">(출금+가방+소모 · 전체 기간)</span>
           </div>
           <div class="kpis">
-            <div class="kpi"><div class="n" id="kUsers">0</div><div class="l">유저 수</div></div>
+            <div class="kpi"><div class="n" id="kUsers">0</div><div class="l">유저 수</div><div class="s" id="kDau">오늘 활성 0</div></div>
             <div class="kpi"><div class="n" id="kAvgOpen">0</div><div class="l">유저당 평균 오픈</div><div class="s" id="kAvgDaily">일 평균 0</div><div class="s" id="kAvgOpenExcl">최다 제외 0</div></div>
             <div class="kpi"><div class="n" id="kAvgVal">0</div><div class="l">유저당 보석 가치</div><div class="s" id="kAvgValDaily">일 평균 0원</div></div>
           </div>
@@ -453,6 +453,7 @@
           const drawn = Number(d.totalDrawnValue) || 0;
           $("cTotal").textContent = won(drawn) + "원";
           $("kUsers").textContent = users.toLocaleString();
+          $("kDau").textContent = "오늘 활성 " + (Number(d.dau) || 0).toLocaleString();
           $("kAvgOpen").textContent = d.avgOpensPerUser ?? 0;
           // 일 평균(전체) + 최다 오픈 유저 제외 일 평균
           // 총 유저-일 = 총오픈/일평균, 최다유저-일 = 최다유저오픈/최다유저일평균 (역산)
