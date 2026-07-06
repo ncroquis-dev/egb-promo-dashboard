@@ -459,6 +459,17 @@
             (wd ? (cons / wd) * 100 : 0).toFixed(2) + "%";
           recoupTypes(d.recoupByType || {}, users);
 
+          // 시뮬레이션 자동 세팅: eCPM=불러오기 값, 오픈수·업글횟수=유저 평균
+          const rct = d.recoupByType || {};
+          const avgCount = (k) =>
+            users ? Math.round((Number((rct[k] || {}).count) || 0) / users) : 0;
+          $("simEcpm").value = ecpm;
+          $("simOpens").value = Math.round(Number(d.avgDailyOpensPerUser) || 0) || 1;
+          $("simKey").value = avgCount("keycap");
+          $("simBag").value = avgCount("bag");
+          $("simDaily").value = avgCount("daily");
+          renderSim();
+
           // 등급별 + 보석당 평균 가치(전체 기간)
           const tdc = Number(d.totalDrawnCount) || 0;
           const avgGem = tdc ? Number(d.totalDrawnValue) / tdc : 0;
