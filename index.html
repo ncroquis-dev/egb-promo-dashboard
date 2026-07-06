@@ -92,16 +92,22 @@
         <div class="row">
           <div><label>하루 오픈수</label><input id="simOpens" type="number" value="20" /></div>
           <div><label>보석 평균가치(원)</label><input id="simEV" type="number" value="2.1" step="0.1" /></div>
-          <div><label>기간(일)</label><input id="simDays" type="number" value="30" /></div>
+          <div><label>eCPM(원)</label><input id="simEcpm" type="number" value="528" /></div>
         </div>
         <div class="row">
-          <div><label>최대 열쇠 업글 횟수</label><input id="simKey" type="number" value="0" /></div>
-          <div><label>가방 확장 횟수</label><input id="simBag" type="number" value="0" /></div>
-          <div><label>하루 상한 업글 횟수</label><input id="simDaily" type="number" value="0" /></div>
+          <div><label>기간(일)</label><input id="simDays" type="number" value="30" /></div>
+          <div><label>최대 열쇠 업글 (≤40)</label><input id="simKey" type="number" value="0" min="0" max="40" /></div>
+          <div><label>가방 확장 (≤190)</label><input id="simBag" type="number" value="0" min="0" max="190" /></div>
+          <div><label>하루 상한 업글 (≤50)</label><input id="simDaily" type="number" value="0" min="0" max="50" /></div>
         </div>
         <div id="simSummary" style="margin-top: 12px; font-size: 13px; color: var(--grey600)"></div>
-        <div class="daily" id="simChart" style="margin-top: 10px"></div>
-        <div class="note" style="margin-top: 6px">누적 출금(원) = 하루 오픈수 × 평균가치 × 일수 − 업그레이드 소모(선지출 가정). 출금률 100% 가정.</div>
+        <div id="simChart" style="margin-top: 10px"></div>
+        <div class="flowleg" style="margin-top: 6px">
+          <span><span class="dot" style="background: var(--green)"></span>출금(지급)</span>
+          <span><span class="dot" style="background: var(--blue)"></span>광고수익</span>
+          <span><span class="dot" style="background: var(--red)"></span>순손익</span>
+        </div>
+        <div class="note" style="margin-top: 6px">출금=오픈수×평균가치×일수−업글소모(선지출) · 광고수익=오픈수×eCPM/1000×일수 · 순손익=광고수익−출금. 출금률 100% 가정.</div>
       </div>
 
       <div id="result" style="display: none">
@@ -241,38 +247,65 @@
         c = 50; for (let i = 0; i < dailyN; i++) { const x = dailyCost(c); if (x == null) break; s += x; c++; }
         return s;
       }
+      function clampInt(id, max) {
+        let v = Math.floor(Number($(id).value) || 0);
+        if (v < 0) { v = 0; $(id).value = 0; }
+        if (v > max) { v = max; $(id).value = max; }
+        return v;
+      }
+      function lineChart(el, days, series, fmt) {
+        const W = 640, H = 210, padL = 46, padR = 8, padT = 10, padB = 16;
+        const all = series.flatMap((s) => s.data);
+        let mn = Math.min(0, ...all), mx = Math.max(0, ...all);
+        if (mx === mn) mx = mn + 1;
+        const X = (i) => padL + (days <= 1 ? 0 : (i / (days - 1)) * (W - padL - padR));
+        const Y = (v) => padT + (1 - (v - mn) / (mx - mn)) * (H - padT - padB);
+        const zy = Y(0);
+        let svg = '<svg viewBox="0 0 ' + W + " " + H + '" style="width:100%;height:210px">';
+        svg += '<line x1="' + padL + '" y1="' + zy + '" x2="' + (W - padR) +
+          '" y2="' + zy + '" stroke="#d0d5dd" stroke-dasharray="3"/>';
+        svg += '<text x="2" y="' + (Y(mx) + 8) + '" font-size="10" fill="#8b95a1">' + fmt(mx) + '</text>';
+        svg += '<text x="2" y="' + (zy + 3) + '" font-size="10" fill="#8b95a1">0</text>';
+        if (mn < 0)
+          svg += '<text x="2" y="' + (Y(mn) - 2) + '" font-size="10" fill="#8b95a1">' + fmt(mn) + '</text>';
+        for (const s of series) {
+          const pts = s.data.map((v, i) => X(i).toFixed(1) + "," + Y(v).toFixed(1)).join(" ");
+          svg += '<polyline fill="none" stroke="' + s.color + '" stroke-width="2" points="' + pts + '"/>';
+        }
+        svg += "</svg>";
+        el.innerHTML = svg;
+      }
       function renderSim() {
         const opens = Number($("simOpens").value) || 0;
         const ev = Number($("simEV").value) || 0;
-        const days = Math.max(1, Math.min(120, Number($("simDays").value) || 30));
+        const ecpm = Number($("simEcpm").value) || 0;
+        const days = Math.max(1, Math.min(120, Math.floor(Number($("simDays").value) || 30)));
         const sink = upgradeSink(
-          Number($("simKey").value) || 0,
-          Number($("simBag").value) || 0,
-          Number($("simDaily").value) || 0,
+          clampInt("simKey", 40),
+          clampInt("simBag", 190),
+          clampInt("simDaily", 50),
         );
         const perDay = opens * ev;
-        const series = [];
-        for (let d = 1; d <= days; d++) series.push(Math.max(0, d * perDay - sink));
-        const max = Math.max(...series, 1);
-        const total = series[series.length - 1];
+        const adPerDay = (opens * ecpm) / 1000;
+        const payout = [], adRev = [], net = [];
+        for (let d = 1; d <= days; d++) {
+          const p = Math.max(0, d * perDay - sink);
+          const a = d * adPerDay;
+          payout.push(p); adRev.push(a); net.push(a - p);
+        }
+        const last = days - 1;
         const recoupDay = perDay > 0 ? Math.ceil(sink / perDay) : 0;
         $("simSummary").innerHTML =
-          "업그레이드 소모 <b>" + won(sink) + "원</b> · 하루 획득 <b>" + won(perDay) +
-          "원</b> · " + days + "일 누적 출금 <b>" + won(total) + "원</b>" +
-          (sink > 0 ? " · 첫 출금까지 <b>" + recoupDay + "일</b>" : "");
-        const el = $("simChart");
-        el.innerHTML = "";
-        const step = Math.ceil(days / 30); // 라벨 과밀 방지
-        series.forEach((v, i) => {
-          const h = Math.round((v / max) * 110);
-          const day = document.createElement("div");
-          day.className = "day";
-          day.innerHTML =
-            '<div class="stack"><div class="seg" style="height:' + h +
-            'px;background:var(--green)"></div></div>' +
-            '<div class="d">' + ((i + 1) % step === 0 || i === 0 ? i + 1 : "") + "</div>";
-          el.appendChild(day);
-        });
+          "업글 소모 <b>" + won(sink) + "원</b> · " + days + "일: 출금 <b>" +
+          won(payout[last]) + "원</b> · 광고수익 <b>" + won(adRev[last]) +
+          "원</b> · 순손익 <b style=\"color:" +
+          (net[last] >= 0 ? "var(--green)" : "var(--red)") + "\">" + won(net[last]) + "원</b>" +
+          (sink > 0 ? " · 첫 출금 <b>" + recoupDay + "일</b>" : "");
+        lineChart($("simChart"), days, [
+          { color: "#15b877", data: payout },
+          { color: "#3182f6", data: adRev },
+          { color: "#f04452", data: net },
+        ], won);
       }
 
       function bars(el, list, color) {
@@ -474,7 +507,7 @@
       $("load").addEventListener("click", load);
 
       // 시뮬레이션: 입력 바뀌면 즉시 다시 그려요.
-      ["simOpens", "simEV", "simDays", "simKey", "simBag", "simDaily"].forEach(
+      ["simOpens", "simEV", "simEcpm", "simDays", "simKey", "simBag", "simDaily"].forEach(
         (id) => $(id).addEventListener("input", renderSim),
       );
       renderSim();
