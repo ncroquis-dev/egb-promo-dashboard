@@ -44,11 +44,12 @@
       .kpi .l { font-size: 12px; color: var(--grey600); margin-top: 3px; }
       .kpi .s { font-size: 11px; color: var(--grey400); }
       .barrow { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-      .barrow .name { width: 34%; font-size: 13px; color: var(--grey600);
+      .barrow .name { width: 26%; font-size: 13px; color: var(--grey600);
         white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .barrow .track { flex: 1; background: var(--grey200); border-radius: 6px; height: 18px; overflow: hidden; }
       .barrow .fill { height: 100%; border-radius: 6px; }
-      .barrow .cnt { width: 80px; text-align: right; font-size: 13px; font-weight: 700; }
+      .barrow .cnt { width: 108px; text-align: right; font-size: 13px; font-weight: 700;
+        white-space: nowrap; }
       .flowbar { display: flex; height: 26px; border-radius: 8px; overflow: hidden; margin: 8px 0; }
       .flowbar .seg { height: 100%; }
       .flowleg { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--grey600); }
@@ -189,11 +190,11 @@
       const LS = "egb_dash";
       const won = (n) => (Math.round(Number(n) || 0)).toLocaleString();
       const GRADES = [
-        { k: "bronze", name: "동화 (1원)", c: "#cd7f32" },
-        { k: "silver", name: "은화 (2원)", c: "#9ca3af" },
-        { k: "gold", name: "금화 (3원)", c: "#f59e0b" },
-        { k: "platinum", name: "백금 (5원)", c: "#60a5fa" },
-        { k: "diamond", name: "다이아 (10원)", c: "#22d3ee" },
+        { k: "bronze", name: "동화 1원", c: "#cd7f32" },
+        { k: "silver", name: "은화 2원", c: "#9ca3af" },
+        { k: "gold", name: "금화 3원", c: "#f59e0b" },
+        { k: "platinum", name: "백금 5원", c: "#60a5fa" },
+        { k: "diamond", name: "다이아 10원", c: "#22d3ee" },
       ];
 
       try {
