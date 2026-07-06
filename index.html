@@ -454,7 +454,20 @@
           $("cTotal").textContent = won(drawn) + "원";
           $("kUsers").textContent = users.toLocaleString();
           $("kAvgOpen").textContent = d.avgOpensPerUser ?? 0;
-          $("kAvgDaily").textContent = "일 평균 " + (d.avgDailyOpensPerUser ?? 0);
+          // 일 평균(전체) + 최다 오픈 유저 제외 일 평균
+          // 총 유저-일 = 총오픈/일평균, 최다유저-일 = 최다유저오픈/최다유저일평균 (역산)
+          {
+            const avgD = Number(d.avgDailyOpensPerUser) || 0;
+            const tO = Number(d.totalDrawnCount) || 0;
+            const mO = Number(d.maxUserOpens) || 0;
+            const mD = Number(d.maxUserDailyOpens) || 0;
+            const totDays = avgD > 0 ? tO / avgD : 0;
+            const mDays = mD > 0 ? mO / mD : 0;
+            const denom = totDays - mDays;
+            const dailyExcl = denom > 0 ? (tO - mO) / denom : 0;
+            $("kAvgDaily").textContent =
+              "일 평균 " + avgD + " · 최다제외 " + dailyExcl.toFixed(1);
+          }
           $("kAvgVal").textContent = won(d.avgValuePerUser) + "원";
           $("kAvgValDaily").textContent = "일 평균 " + won(d.avgDailyValuePerUser) + "원";
           const maxOpens = Number(d.maxUserOpens) || 0;
