@@ -86,9 +86,13 @@
       </div>
 
       <div id="result" style="display: none">
-        <!-- 개요 -->
+        <!-- 비용 (유저가 획득하는 포인트) -->
         <div class="card">
-          <h2>👥 개요</h2>
+          <h2>💸 비용 <span style="font-size: 12px; color: var(--grey400); font-weight: 400">유저가 획득하는 포인트</span></h2>
+          <div style="font-size: 13px; color: var(--grey600); margin-bottom: 10px">
+            총 획득 포인트 <b id="cTotal">0원</b>
+            <span style="color: var(--grey400)">(출금+가방+소모 · 전체 기간)</span>
+          </div>
           <div class="kpis">
             <div class="kpi"><div class="n" id="kUsers">0</div><div class="l">유저 수</div></div>
             <div class="kpi"><div class="n" id="kAvgOpen">0</div><div class="l">유저당 평균 오픈</div><div class="s" id="kAvgDaily">일 평균 0</div></div>
@@ -98,6 +102,21 @@
             <div class="kpi"><div class="n" id="kMaxOpen">0</div><div class="l">최다 오픈 유저</div><div class="s">(총 오픈수)</div></div>
             <div class="kpi"><div class="n" id="kMaxDaily">0</div><div class="l">└ 그 유저 일 평균</div><div class="s">(오픈수/활동일)</div></div>
           </div>
+        </div>
+
+        <!-- 회수 (보석 소모로 되찾은 포인트) -->
+        <div class="card">
+          <h2>♻️ 회수 <span style="font-size: 12px; color: var(--grey400); font-weight: 400">보석 소모로 되찾은 포인트</span></h2>
+          <div class="kpis">
+            <div class="kpi"><div class="n" id="rcPoints" style="color: var(--green)">0</div><div class="l">소모된 포인트</div><div class="s">(원)</div></div>
+            <div class="kpi"><div class="n" id="rcCount">0</div><div class="l">소모된 보석</div><div class="s">(개)</div></div>
+            <div class="kpi"><div class="n" id="rcRate">0%</div><div class="l">회수율</div><div class="s">(소모÷총획득)</div></div>
+          </div>
+          <div class="kpis" style="margin-top: 12px">
+            <div class="kpi"><div class="n" id="rcPerUser">0</div><div class="l">유저당 소모</div><div class="s">(원)</div></div>
+            <div class="kpi"><div class="n" id="rcVsWithdraw">0%</div><div class="l">출금 대비 회수</div><div class="s">(소모÷출금)</div></div>
+          </div>
+          <div class="note" style="margin-top: 10px">※ 소모는 집계 시작(오늘) 이후 누적. 스위치·업그레이드 활성화 후 쌓여요.</div>
         </div>
 
         <!-- 보석 등급별 -->
@@ -271,13 +290,26 @@
             callAction(url, anon, admin, { action: "promo_stats", days }),
           ]);
 
-          // 개요
-          $("kUsers").textContent = (d.users ?? 0).toLocaleString();
+          // 비용 (유저가 획득하는 포인트)
+          const users = Number(d.users) || 0;
+          const drawn = Number(d.totalDrawnValue) || 0;
+          $("cTotal").textContent = won(drawn) + "원";
+          $("kUsers").textContent = users.toLocaleString();
           $("kAvgOpen").textContent = d.avgOpensPerUser ?? 0;
           $("kAvgDaily").textContent = "일 평균 " + (d.avgDailyOpensPerUser ?? 0);
           $("kAvgVal").textContent = won(d.avgValuePerUser) + "원";
           $("kMaxOpen").textContent = (d.maxUserOpens ?? 0).toLocaleString();
           $("kMaxDaily").textContent = d.maxUserDailyOpens ?? 0;
+
+          // 회수 (보석 소모로 되찾은 포인트)
+          const cons = Number(d.consumedPoints) || 0;
+          const wd = Number(d.withdrawnPoints) || 0;
+          $("rcPoints").textContent = won(cons) + "원";
+          $("rcCount").textContent = (d.consumedCount ?? 0).toLocaleString();
+          $("rcRate").textContent = (drawn ? (cons / drawn) * 100 : 0).toFixed(2) + "%";
+          $("rcPerUser").textContent = won(users ? cons / users : 0) + "원";
+          $("rcVsWithdraw").textContent =
+            (wd ? (cons / wd) * 100 : 0).toFixed(2) + "%";
 
           // 등급별 + 보석당 평균 가치(전체 기간)
           const tdc = Number(d.totalDrawnCount) || 0;
