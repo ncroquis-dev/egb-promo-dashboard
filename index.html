@@ -132,7 +132,7 @@
           </div>
           <div class="kpis">
             <div class="kpi"><div class="n" id="kUsers">0</div><div class="l">유저 수</div></div>
-            <div class="kpi"><div class="n" id="kAvgOpen">0</div><div class="l">유저당 평균 오픈</div><div class="s" id="kAvgDaily">일 평균 0</div></div>
+            <div class="kpi"><div class="n" id="kAvgOpen">0</div><div class="l">유저당 평균 오픈</div><div class="s" id="kAvgDaily">일 평균 0</div><div class="s" id="kAvgOpenExcl">최다 제외 0</div></div>
             <div class="kpi"><div class="n" id="kAvgVal">0</div><div class="l">유저당 보석 가치</div><div class="s" id="kAvgValDaily">일 평균 0원</div></div>
           </div>
           <div class="kpis" style="margin-top: 12px">
@@ -459,6 +459,9 @@
           $("kAvgValDaily").textContent = "일 평균 " + won(d.avgDailyValuePerUser) + "원";
           const maxOpens = Number(d.maxUserOpens) || 0;
           const totalOpens = Number(d.totalDrawnCount) || 0;
+          $("kAvgOpenExcl").textContent =
+            "최다 제외 " +
+            (users > 1 ? (totalOpens - maxOpens) / (users - 1) : 0).toFixed(1);
           $("kMaxOpen").textContent = maxOpens.toLocaleString();
           $("kMaxOpenPct").textContent =
             "전체의 " +
