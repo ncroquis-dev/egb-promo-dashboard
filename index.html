@@ -136,7 +136,7 @@
             <div class="kpi"><div class="n" id="kAvgVal">0</div><div class="l">유저당 보석 가치</div><div class="s" id="kAvgValDaily">일 평균 0원</div></div>
           </div>
           <div class="kpis" style="margin-top: 12px">
-            <div class="kpi"><div class="n" id="kMaxOpen">0</div><div class="l">최다 오픈 유저</div><div class="s" id="kMaxOpenPct">전체의 0%</div></div>
+            <div class="kpi"><div class="n" id="kMaxOpen">0</div><div class="l">최다 오픈 유저</div><div class="s" id="kMaxOpenPct">전체의 0%</div><div class="s" id="kSecondOpen">2위 0 (0%)</div></div>
             <div class="kpi"><div class="n" id="kMaxDaily">0</div><div class="l">└ 그 유저 일 평균</div><div class="s">(오픈수/활동일)</div></div>
           </div>
         </div>
@@ -487,6 +487,13 @@
             "전체의 " +
             (totalOpens ? (maxOpens / totalOpens) * 100 : 0).toFixed(1) +
             "%";
+          const secondOpens = Number(d.secondUserOpens) || 0;
+          $("kSecondOpen").textContent =
+            "2위 " +
+            secondOpens.toLocaleString() +
+            " (" +
+            (totalOpens ? (secondOpens / totalOpens) * 100 : 0).toFixed(1) +
+            "%)";
           $("kMaxDaily").textContent = d.maxUserDailyOpens ?? 0;
 
           // 회수 (보석 소모로 되찾은 포인트)
