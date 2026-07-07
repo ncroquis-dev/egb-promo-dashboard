@@ -143,6 +143,11 @@
             <div class="kpi"><div class="l" style="margin-bottom: 4px">최다 오픈 유저 (상위 5)</div><div id="kTopOpens"></div><div class="s">(오픈수, 비율)</div></div>
             <div class="kpi"><div class="l" style="margin-bottom: 4px">└ 그 유저 일 평균</div><div id="kTopDailies"></div><div class="s">(오픈수/활동일)</div></div>
           </div>
+          <div style="margin-top: 14px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap">
+            <div id="topPie"></div>
+            <div id="topPieLegend" style="flex: 1; min-width: 180px; font-size: 13px"></div>
+          </div>
+          <div class="note" style="margin-top: 6px">상위 5명 오픈 점유율 (전체 총 오픈 대비)</div>
         </div>
 
         <!-- 회수 (보석 소모로 되찾은 포인트) -->
@@ -578,6 +583,56 @@
         });
       }
 
+      function renderTopPie(topUsers, total) {
+        const tu = Array.isArray(topUsers) ? topUsers : [];
+        const COLORS = ["#3182f6", "#15b877", "#f59e0b", "#f04452", "#8b5cf6"];
+        const slices = tu.slice(0, 5).map((u, i) => ({
+          label: (u.rank || i + 1) + "위",
+          value: Number(u.opens) || 0,
+          color: COLORS[i % COLORS.length],
+        }));
+        const top5Sum = slices.reduce((s, x) => s + x.value, 0);
+        const rest = Math.max(0, (Number(total) || 0) - top5Sum);
+        slices.push({ label: "나머지", value: rest, color: "#e5e8eb" });
+        const sum = slices.reduce((s, x) => s + x.value, 0) || 1;
+        const R = 82, r0 = 46, cx = 90, cy = 90;
+        let ang = -Math.PI / 2;
+        let svg = '<svg viewBox="0 0 180 180" style="width:170px;height:170px">';
+        slices.forEach((s) => {
+          const frac = s.value / sum;
+          if (frac <= 0) return;
+          const a2 = ang + frac * 2 * Math.PI;
+          const lg = frac > 0.5 ? 1 : 0;
+          const x1 = cx + R * Math.cos(ang), y1 = cy + R * Math.sin(ang);
+          const x2 = cx + R * Math.cos(a2), y2 = cy + R * Math.sin(a2);
+          const ix2 = cx + r0 * Math.cos(a2), iy2 = cy + r0 * Math.sin(a2);
+          const ix1 = cx + r0 * Math.cos(ang), iy1 = cy + r0 * Math.sin(ang);
+          svg += '<path d="M' + x1.toFixed(1) + " " + y1.toFixed(1) +
+            " A" + R + " " + R + " 0 " + lg + " 1 " + x2.toFixed(1) + " " + y2.toFixed(1) +
+            " L" + ix2.toFixed(1) + " " + iy2.toFixed(1) +
+            " A" + r0 + " " + r0 + " 0 " + lg + " 0 " + ix1.toFixed(1) + " " + iy1.toFixed(1) +
+            ' Z" fill="' + s.color + '"/>';
+          ang = a2;
+        });
+        const top5Pct = (top5Sum / sum) * 100;
+        svg += '<text x="90" y="86" text-anchor="middle" font-size="20" font-weight="800" fill="#191f28">' +
+          top5Pct.toFixed(1) + "%</text>";
+        svg += '<text x="90" y="104" text-anchor="middle" font-size="11" fill="#8b95a1">상위5 점유</text>';
+        svg += "</svg>";
+        $("topPie").innerHTML = svg;
+        $("topPieLegend").innerHTML = slices
+          .map((s) => {
+            const pct = (s.value / sum) * 100;
+            return '<div style="display:flex;align-items:center;gap:8px;padding:2px 0">' +
+              '<span style="width:10px;height:10px;border-radius:3px;background:' + s.color +
+              ';display:inline-block"></span>' +
+              '<span style="flex:1;color:var(--grey700)">' + s.label + "</span>" +
+              '<span style="color:var(--grey600);font-weight:700">' +
+              (Number(s.value) || 0).toLocaleString() + " (" + pct.toFixed(1) + "%)</span></div>";
+          })
+          .join("");
+      }
+
       function flow(w, b, c) {
         const t = w + b + c || 1;
         const pc = (v) => ((v / t) * 100).toFixed(1);
@@ -706,6 +761,7 @@
                 (Number(row.daily) || 0).toLocaleString() + "</div>",
             )
             .join("");
+          renderTopPie(d.topUsers, d.totalDrawnCount);
 
           // 회수 (보석 소모로 되찾은 포인트)
           const cons = Number(d.consumedPoints) || 0;
