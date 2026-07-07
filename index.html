@@ -136,8 +136,8 @@
             <div class="kpi"><div class="n" id="kAvgVal">0</div><div class="l">유저당 보석 가치</div><div class="s" id="kAvgValDaily">일 평균 0원</div></div>
           </div>
           <div class="kpis" style="margin-top: 12px">
-            <div class="kpi"><div class="l" style="margin-bottom: 4px">최다 오픈 유저</div><div id="kTop1" style="font-size: 14px; font-weight: 700; color: var(--grey800); line-height: 1.55">1위 —</div><div id="kTop2" style="font-size: 14px; font-weight: 700; color: var(--grey800); line-height: 1.55">2위 —</div><div class="s">(오픈수, 비율)</div></div>
-            <div class="kpi"><div class="l" style="margin-bottom: 4px">└ 그 유저 일 평균</div><div id="kTopDaily1" style="font-size: 14px; font-weight: 700; color: var(--grey800); line-height: 1.55">1위 —</div><div id="kTopDaily2" style="font-size: 14px; font-weight: 700; color: var(--grey800); line-height: 1.55">2위 —</div><div class="s">(오픈수/활동일)</div></div>
+            <div class="kpi"><div class="l" style="margin-bottom: 4px">최다 오픈 유저 (상위 5)</div><div id="kTopOpens"></div><div class="s">(오픈수, 비율)</div></div>
+            <div class="kpi"><div class="l" style="margin-bottom: 4px">└ 그 유저 일 평균</div><div id="kTopDailies"></div><div class="s">(오픈수/활동일)</div></div>
           </div>
         </div>
 
@@ -482,17 +482,27 @@
           $("kAvgValDaily").textContent = "일 평균 " + won(d.avgDailyValuePerUser) + "원";
           const maxOpens = Number(d.maxUserOpens) || 0;
           const totalOpens = Number(d.totalDrawnCount) || 0;
-          const secondOpens = Number(d.secondUserOpens) || 0;
           const openPct = (n) =>
             (totalOpens ? (n / totalOpens) * 100 : 0).toFixed(1);
-          $("kTop1").textContent =
-            "1위 " + maxOpens.toLocaleString() + " (" + openPct(maxOpens) + "%)";
-          $("kTop2").textContent =
-            "2위 " + secondOpens.toLocaleString() + " (" + openPct(secondOpens) + "%)";
-          $("kTopDaily1").textContent =
-            "1위 " + (Number(d.maxUserDailyOpens) || 0).toLocaleString();
-          $("kTopDaily2").textContent =
-            "2위 " + (Number(d.secondUserDailyOpens) || 0).toLocaleString();
+          const tu = Array.isArray(d.topUsers) ? d.topUsers : [];
+          const lineStyle =
+            "font-size:13px;font-weight:700;color:var(--grey800);line-height:1.55";
+          $("kTopOpens").innerHTML = tu
+            .map((row) => {
+              const o = Number(row.opens) || 0;
+              return (
+                '<div style="' + lineStyle + '">' + row.rank + "위 " +
+                o.toLocaleString() + " (" + openPct(o) + "%)</div>"
+              );
+            })
+            .join("");
+          $("kTopDailies").innerHTML = tu
+            .map(
+              (row) =>
+                '<div style="' + lineStyle + '">' + row.rank + "위 " +
+                (Number(row.daily) || 0).toLocaleString() + "</div>",
+            )
+            .join("");
 
           // 회수 (보석 소모로 되찾은 포인트)
           const cons = Number(d.consumedPoints) || 0;
