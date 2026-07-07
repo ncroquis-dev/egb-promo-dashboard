@@ -164,7 +164,7 @@
         <div class="card">
           <h2>📈 일일 신규·활성 유저 <span style="font-size: 12px; color: var(--grey400); font-weight: 400">최근 30일</span></h2>
           <div id="trendSummary" style="font-size: 13px; color: var(--grey600); margin-bottom: 4px"></div>
-          <div id="trendChart"></div>
+          <div id="trendChart" style="overflow-x: auto"></div>
           <div class="flowleg" style="margin-top: 6px">
             <span><span class="dot" style="background: #3182f6"></span>신규 (NRU)</span>
             <span><span class="dot" style="background: #15b877"></span>활성 (DAU)</span>
@@ -278,28 +278,37 @@
       }
       function lineChart(el, days, series, fmt, xlabels, showValues) {
         const hasX = Array.isArray(xlabels) && xlabels.length > 0;
-        const W = 640, H = 210, padL = 46, padR = 8,
-          padT = showValues ? 16 : 10,
-          padB = hasX ? 26 : 16;
+        const H = showValues ? 230 : 210;
+        const padL = 46, padR = 12,
+          padT = showValues ? 24 : 10,
+          padB = hasX ? (showValues ? 34 : 26) : 16;
+        // 값 표시 모드: 포인트당 폭을 넉넉히 줘서 가로 스크롤되게 함
+        const W = showValues ? Math.max(660, days * 48) : 640;
         const all = series.flatMap((s) => s.data);
         let mn = Math.min(0, ...all), mx = Math.max(0, ...all);
         if (mx === mn) mx = mn + 1;
         const X = (i) => padL + (days <= 1 ? 0 : (i / (days - 1)) * (W - padL - padR));
         const Y = (v) => padT + (1 - (v - mn) / (mx - mn)) * (H - padT - padB);
         const zy = Y(0);
-        let svg = '<svg viewBox="0 0 ' + W + " " + H + '" style="width:100%;height:210px">';
+        const svgStyle = showValues
+          ? "display:block;height:" + H + "px"
+          : "width:100%;height:" + H + "px";
+        let svg =
+          '<svg viewBox="0 0 ' + W + " " + H + '"' +
+          (showValues ? ' width="' + W + '"' : "") +
+          ' style="' + svgStyle + '">';
         svg += '<line x1="' + padL + '" y1="' + zy + '" x2="' + (W - padR) +
           '" y2="' + zy + '" stroke="#d0d5dd" stroke-dasharray="3"/>';
-        svg += '<text x="2" y="' + (Y(mx) + 8) + '" font-size="10" fill="#8b95a1">' + fmt(mx) + '</text>';
-        svg += '<text x="2" y="' + (zy + 3) + '" font-size="10" fill="#8b95a1">0</text>';
+        svg += '<text x="2" y="' + (Y(mx) + 8) + '" font-size="11" fill="#8b95a1">' + fmt(mx) + '</text>';
+        svg += '<text x="2" y="' + (zy + 3) + '" font-size="11" fill="#8b95a1">0</text>';
         if (mn < 0)
-          svg += '<text x="2" y="' + (Y(mn) - 2) + '" font-size="10" fill="#8b95a1">' + fmt(mn) + '</text>';
+          svg += '<text x="2" y="' + (Y(mn) - 2) + '" font-size="11" fill="#8b95a1">' + fmt(mn) + '</text>';
         if (hasX) {
-          const step = Math.ceil(days / 8) || 1;
+          const step = showValues ? 1 : Math.ceil(days / 8) || 1;
           for (let i = 0; i < days; i++) {
             if (i % step === 0 || i === days - 1) {
-              svg += '<text x="' + X(i).toFixed(1) + '" y="' + (H - 4) +
-                '" font-size="9" fill="#8b95a1" text-anchor="middle">' + xlabels[i] + "</text>";
+              svg += '<text x="' + X(i).toFixed(1) + '" y="' + (H - 6) +
+                '" font-size="10" fill="#8b95a1" text-anchor="middle">' + xlabels[i] + "</text>";
             }
           }
         }
@@ -309,13 +318,13 @@
         }
         if (showValues) {
           series.forEach((s, si) => {
-            const dy = si === 0 ? -5 : 11; // 첫 선(NRU) 위, 나머지(DAU) 아래
+            const dy = si === 0 ? -7 : 15; // 첫 선(NRU) 위, 나머지(DAU) 아래
             s.data.forEach((v, i) => {
               const x = X(i).toFixed(1), y = Y(v);
               svg += '<circle cx="' + x + '" cy="' + y.toFixed(1) +
-                '" r="2" fill="' + s.color + '"/>';
+                '" r="3" fill="' + s.color + '"/>';
               svg += '<text x="' + x + '" y="' + (y + dy).toFixed(1) +
-                '" font-size="8" fill="' + s.color +
+                '" font-size="12" font-weight="700" fill="' + s.color +
                 '" text-anchor="middle">' + fmt(v) + "</text>";
             });
           });
