@@ -276,9 +276,10 @@
         if (v > max) { v = max; $(id).value = max; }
         return v;
       }
-      function lineChart(el, days, series, fmt, xlabels) {
+      function lineChart(el, days, series, fmt, xlabels, showValues) {
         const hasX = Array.isArray(xlabels) && xlabels.length > 0;
-        const W = 640, H = 210, padL = 46, padR = 8, padT = 10,
+        const W = 640, H = 210, padL = 46, padR = 8,
+          padT = showValues ? 16 : 10,
           padB = hasX ? 26 : 16;
         const all = series.flatMap((s) => s.data);
         let mn = Math.min(0, ...all), mx = Math.max(0, ...all);
@@ -305,6 +306,19 @@
         for (const s of series) {
           const pts = s.data.map((v, i) => X(i).toFixed(1) + "," + Y(v).toFixed(1)).join(" ");
           svg += '<polyline fill="none" stroke="' + s.color + '" stroke-width="2" points="' + pts + '"/>';
+        }
+        if (showValues) {
+          series.forEach((s, si) => {
+            const dy = si === 0 ? -5 : 11; // 첫 선(NRU) 위, 나머지(DAU) 아래
+            s.data.forEach((v, i) => {
+              const x = X(i).toFixed(1), y = Y(v);
+              svg += '<circle cx="' + x + '" cy="' + y.toFixed(1) +
+                '" r="2" fill="' + s.color + '"/>';
+              svg += '<text x="' + x + '" y="' + (y + dy).toFixed(1) +
+                '" font-size="8" fill="' + s.color +
+                '" text-anchor="middle">' + fmt(v) + "</text>";
+            });
+          });
         }
         svg += "</svg>";
         el.innerHTML = svg;
@@ -438,6 +452,7 @@
           ],
           (v) => Math.round(v).toLocaleString(),
           dates,
+          true,
         );
       }
 
