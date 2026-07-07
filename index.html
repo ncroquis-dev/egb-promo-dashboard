@@ -160,6 +160,13 @@
           <div class="note" style="margin-top: 8px">※ 위 요약 지표(소모 포인트 등)는 집계 시작 이후. 아래 카테고리별은 현재 레벨로 역산한 전체 기간 값.</div>
         </div>
 
+        <!-- 일일 신규 유저(NRU) -->
+        <div class="card">
+          <h2>📈 일일 신규 유저 (NRU) <span style="font-size: 12px; color: var(--grey400); font-weight: 400">최근 30일 · 가입일 기준</span></h2>
+          <div id="nruSummary" style="font-size: 13px; color: var(--grey600); margin-bottom: 8px"></div>
+          <div class="daily" id="nruChart"></div>
+        </div>
+
         <!-- 보석 등급별 -->
         <div class="card">
           <h2>💠 등급별 꺼낸 보석 수</h2>
@@ -392,6 +399,30 @@
         }
       }
 
+      function renderNru(list) {
+        const el = $("nruChart");
+        el.innerHTML = "";
+        const arr = Array.isArray(list) ? list : [];
+        const max = Math.max(...arr.map((x) => Number(x.count) || 0), 1);
+        const total = arr.reduce((s, x) => s + (Number(x.count) || 0), 0);
+        $("nruSummary").innerHTML =
+          "최근 " + arr.length + "일 신규 <b>" + total.toLocaleString() +
+          "명</b> · 일 평균 <b>" + (arr.length ? total / arr.length : 0).toFixed(1) + "명</b>";
+        const step = Math.ceil(arr.length / 15) || 1;
+        arr.forEach((x, i) => {
+          const c = Number(x.count) || 0;
+          const h = Math.round((c / max) * 110);
+          const day = document.createElement("div");
+          day.className = "day";
+          day.innerHTML =
+            '<div class="stack" title="' + x.date + ": " + c +
+            '명"><div class="seg" style="height:' + h +
+            'px;background:var(--blue)"></div></div>' +
+            '<div class="d">' + (i % step === 0 ? x.date : "") + "</div>";
+          el.appendChild(day);
+        });
+      }
+
       function flow(w, b, c) {
         const t = w + b + c || 1;
         const pc = (v) => ((v / t) * 100).toFixed(1);
@@ -526,6 +557,7 @@
           $("rcVsWithdraw").textContent =
             (wd ? (cons / wd) * 100 : 0).toFixed(2) + "%";
           recoupTypes(d.recoupByType || {}, users);
+          renderNru(d.nruDaily);
 
           // 시뮬레이션 자동 세팅: eCPM=불러오기 값, 오픈수·업글횟수=유저 평균
           const rct = d.recoupByType || {};
