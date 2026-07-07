@@ -160,11 +160,16 @@
           <div class="note" style="margin-top: 8px">※ 위 요약 지표(소모 포인트 등)는 집계 시작 이후. 아래 카테고리별은 현재 레벨로 역산한 전체 기간 값.</div>
         </div>
 
-        <!-- 일일 신규 유저(NRU) -->
+        <!-- 일일 신규·활성 유저 (NRU·DAU) -->
         <div class="card">
-          <h2>📈 일일 신규 유저 (NRU) <span style="font-size: 12px; color: var(--grey400); font-weight: 400">최근 30일 · 가입일 기준</span></h2>
-          <div id="nruSummary" style="font-size: 13px; color: var(--grey600); margin-bottom: 8px"></div>
-          <div class="daily" id="nruChart"></div>
+          <h2>📈 일일 신규·활성 유저 <span style="font-size: 12px; color: var(--grey400); font-weight: 400">최근 30일</span></h2>
+          <div id="trendSummary" style="font-size: 13px; color: var(--grey600); margin-bottom: 4px"></div>
+          <div id="trendChart"></div>
+          <div class="flowleg" style="margin-top: 6px">
+            <span><span class="dot" style="background: #3182f6"></span>신규 (NRU)</span>
+            <span><span class="dot" style="background: #15b877"></span>활성 (DAU)</span>
+          </div>
+          <div class="note" style="margin-top: 6px">※ DAU는 오늘부터 정확. 이전 날짜는 백필(마지막 활동일 기준)이라 과소일 수 있어요.</div>
         </div>
 
         <!-- 보석 등급별 -->
@@ -271,8 +276,10 @@
         if (v > max) { v = max; $(id).value = max; }
         return v;
       }
-      function lineChart(el, days, series, fmt) {
-        const W = 640, H = 210, padL = 46, padR = 8, padT = 10, padB = 16;
+      function lineChart(el, days, series, fmt, xlabels) {
+        const hasX = Array.isArray(xlabels) && xlabels.length > 0;
+        const W = 640, H = 210, padL = 46, padR = 8, padT = 10,
+          padB = hasX ? 26 : 16;
         const all = series.flatMap((s) => s.data);
         let mn = Math.min(0, ...all), mx = Math.max(0, ...all);
         if (mx === mn) mx = mn + 1;
@@ -286,6 +293,15 @@
         svg += '<text x="2" y="' + (zy + 3) + '" font-size="10" fill="#8b95a1">0</text>';
         if (mn < 0)
           svg += '<text x="2" y="' + (Y(mn) - 2) + '" font-size="10" fill="#8b95a1">' + fmt(mn) + '</text>';
+        if (hasX) {
+          const step = Math.ceil(days / 8) || 1;
+          for (let i = 0; i < days; i++) {
+            if (i % step === 0 || i === days - 1) {
+              svg += '<text x="' + X(i).toFixed(1) + '" y="' + (H - 4) +
+                '" font-size="9" fill="#8b95a1" text-anchor="middle">' + xlabels[i] + "</text>";
+            }
+          }
+        }
         for (const s of series) {
           const pts = s.data.map((v, i) => X(i).toFixed(1) + "," + Y(v).toFixed(1)).join(" ");
           svg += '<polyline fill="none" stroke="' + s.color + '" stroke-width="2" points="' + pts + '"/>';
@@ -399,28 +415,30 @@
         }
       }
 
-      function renderNru(list) {
-        const el = $("nruChart");
-        el.innerHTML = "";
-        const arr = Array.isArray(list) ? list : [];
-        const max = Math.max(...arr.map((x) => Number(x.count) || 0), 1);
-        const total = arr.reduce((s, x) => s + (Number(x.count) || 0), 0);
-        $("nruSummary").innerHTML =
-          "최근 " + arr.length + "일 신규 <b>" + total.toLocaleString() +
-          "명</b> · 일 평균 <b>" + (arr.length ? total / arr.length : 0).toFixed(1) + "명</b>";
-        const step = Math.ceil(arr.length / 15) || 1;
-        arr.forEach((x, i) => {
-          const c = Number(x.count) || 0;
-          const h = Math.round((c / max) * 110);
-          const day = document.createElement("div");
-          day.className = "day";
-          day.innerHTML =
-            '<div class="stack" title="' + x.date + ": " + c +
-            '명"><div class="seg" style="height:' + h +
-            'px;background:var(--blue)"></div></div>' +
-            '<div class="d">' + (i % step === 0 ? x.date : "") + "</div>";
-          el.appendChild(day);
-        });
+      function renderTrend(nruList, dauList) {
+        const nru = Array.isArray(nruList) ? nruList : [];
+        const dau = Array.isArray(dauList) ? dauList : [];
+        const dauMap = {};
+        dau.forEach((x) => (dauMap[x.date] = Number(x.count) || 0));
+        const dates = nru.map((x) => x.date);
+        const nruData = nru.map((x) => Number(x.count) || 0);
+        const dauData = nru.map((x) => dauMap[x.date] || 0);
+        const nTot = nruData.reduce((s, v) => s + v, 0);
+        const dToday = dauData[dauData.length - 1] || 0;
+        $("trendSummary").innerHTML =
+          "최근 " + dates.length + "일 신규 <b>" + nTot.toLocaleString() +
+          "명</b> (일평균 " + (dates.length ? nTot / dates.length : 0).toFixed(1) +
+          ") · 오늘 활성 <b>" + dToday.toLocaleString() + "명</b>";
+        lineChart(
+          $("trendChart"),
+          dates.length,
+          [
+            { color: "#3182f6", data: nruData },
+            { color: "#15b877", data: dauData },
+          ],
+          (v) => Math.round(v).toLocaleString(),
+          dates,
+        );
       }
 
       function flow(w, b, c) {
@@ -557,7 +575,7 @@
           $("rcVsWithdraw").textContent =
             (wd ? (cons / wd) * 100 : 0).toFixed(2) + "%";
           recoupTypes(d.recoupByType || {}, users);
-          renderNru(d.nruDaily);
+          renderTrend(d.nruDaily, d.dauDaily);
 
           // 시뮬레이션 자동 세팅: eCPM=불러오기 값, 오픈수·업글횟수=유저 평균
           const rct = d.recoupByType || {};
