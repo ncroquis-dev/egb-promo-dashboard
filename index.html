@@ -127,12 +127,12 @@
         <div class="card">
           <h2>💸 비용 <span style="font-size: 12px; color: var(--grey400); font-weight: 400">유저가 획득하는 포인트</span></h2>
           <div style="font-size: 13px; color: var(--grey600); margin-bottom: 4px">
-            총 획득 포인트 <b id="cTotal">0원</b>
-            <span style="color: var(--grey400)">(출금+가방+소모 · 전체 기간)</span>
+            현재까지 총 획득 포인트 <b id="cTotal">0원</b>
+            <span style="color: var(--grey400)">(하루 평균 <b id="cDailyValue">0원</b>)</span>
           </div>
           <div style="font-size: 13px; color: var(--grey600); margin-bottom: 10px">
-            하루 평균 오픈 <b id="cDailyOpens">0</b> 상자
-            <span style="color: var(--grey400)">(총 오픈 ÷ 운영일수)</span>
+            총 오픈된 상자 수 <b id="cTotalOpens">0개</b>
+            <span style="color: var(--grey400)">(하루 평균 <b id="cDailyOpens">0개</b>)</span>
           </div>
           <div class="kpis">
             <div class="kpi"><div class="n" id="kUsers">0</div><div class="l">유저 수</div><div class="s" id="kDau">오늘 0 · 어제 0</div><div class="s" id="kWauMau">7일 0 · 30일 0</div></div>
@@ -633,7 +633,11 @@
           const users = Number(d.users) || 0;
           const drawn = Number(d.totalDrawnValue) || 0;
           $("cTotal").textContent = won(drawn) + "원";
-          $("cDailyOpens").textContent = (Number(d.dailyTotalOpens) || 0).toLocaleString();
+          $("cDailyValue").textContent = won(d.dailyTotalValue) + "원";
+          $("cTotalOpens").textContent =
+            (Number(d.totalDrawnCount) || 0).toLocaleString() + "개";
+          $("cDailyOpens").textContent =
+            won(d.dailyTotalOpens) + "개";
           $("kUsers").textContent = users.toLocaleString();
           $("kDau").textContent =
             "오늘 " + (Number(d.dau) || 0).toLocaleString() +
