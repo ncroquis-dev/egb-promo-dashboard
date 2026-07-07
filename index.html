@@ -136,8 +136,8 @@
             <div class="kpi"><div class="n" id="kAvgVal">0</div><div class="l">유저당 보석 가치</div><div class="s" id="kAvgValDaily">일 평균 0원</div></div>
           </div>
           <div class="kpis" style="margin-top: 12px">
-            <div class="kpi"><div class="n" id="kMaxOpen">0</div><div class="l">최다 오픈 유저</div><div class="s" id="kMaxOpenPct">전체의 0%</div><div class="s" id="kSecondOpen">2위 0 (0%)</div></div>
-            <div class="kpi"><div class="n" id="kMaxDaily">0</div><div class="l">└ 그 유저 일 평균</div><div class="s">(오픈수/활동일)</div></div>
+            <div class="kpi"><div class="l" style="margin-bottom: 4px">최다 오픈 유저</div><div id="kTop1" style="font-size: 14px; font-weight: 700; color: var(--grey800); line-height: 1.55">1위 —</div><div id="kTop2" style="font-size: 14px; font-weight: 700; color: var(--grey800); line-height: 1.55">2위 —</div><div class="s">(오픈수, 비율)</div></div>
+            <div class="kpi"><div class="l" style="margin-bottom: 4px">└ 그 유저 일 평균</div><div id="kTopDaily1" style="font-size: 14px; font-weight: 700; color: var(--grey800); line-height: 1.55">1위 —</div><div id="kTopDaily2" style="font-size: 14px; font-weight: 700; color: var(--grey800); line-height: 1.55">2위 —</div><div class="s">(오픈수/활동일)</div></div>
           </div>
         </div>
 
@@ -482,19 +482,17 @@
           $("kAvgValDaily").textContent = "일 평균 " + won(d.avgDailyValuePerUser) + "원";
           const maxOpens = Number(d.maxUserOpens) || 0;
           const totalOpens = Number(d.totalDrawnCount) || 0;
-          $("kMaxOpen").textContent = maxOpens.toLocaleString();
-          $("kMaxOpenPct").textContent =
-            "전체의 " +
-            (totalOpens ? (maxOpens / totalOpens) * 100 : 0).toFixed(1) +
-            "%";
           const secondOpens = Number(d.secondUserOpens) || 0;
-          $("kSecondOpen").textContent =
-            "2위 " +
-            secondOpens.toLocaleString() +
-            " (" +
-            (totalOpens ? (secondOpens / totalOpens) * 100 : 0).toFixed(1) +
-            "%)";
-          $("kMaxDaily").textContent = d.maxUserDailyOpens ?? 0;
+          const openPct = (n) =>
+            (totalOpens ? (n / totalOpens) * 100 : 0).toFixed(1);
+          $("kTop1").textContent =
+            "1위 " + maxOpens.toLocaleString() + " (" + openPct(maxOpens) + "%)";
+          $("kTop2").textContent =
+            "2위 " + secondOpens.toLocaleString() + " (" + openPct(secondOpens) + "%)";
+          $("kTopDaily1").textContent =
+            "1위 " + (Number(d.maxUserDailyOpens) || 0).toLocaleString();
+          $("kTopDaily2").textContent =
+            "2위 " + (Number(d.secondUserDailyOpens) || 0).toLocaleString();
 
           // 회수 (보석 소모로 되찾은 포인트)
           const cons = Number(d.consumedPoints) || 0;
