@@ -291,7 +291,7 @@
         const Y = (v) => padT + (1 - (v - mn) / (mx - mn)) * (H - padT - padB);
         const zy = Y(0);
         const svgStyle = showValues
-          ? "display:block;height:" + H + "px"
+          ? "display:block;width:" + W + "px;height:" + H + "px"
           : "width:100%;height:" + H + "px";
         let svg =
           '<svg viewBox="0 0 ' + W + " " + H + '"' +
@@ -463,9 +463,13 @@
           dates,
           true,
         );
-        // 최초 로딩 시 맨 오른쪽(오늘)이 보이도록 스크롤
+        // 최초 로딩 시 맨 오른쪽(오늘)이 보이도록 스크롤 (레이아웃 후로 미룸)
         const tc = $("trendChart");
-        tc.scrollLeft = tc.scrollWidth;
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            tc.scrollLeft = tc.scrollWidth;
+          });
+        });
       }
 
       function flow(w, b, c) {
