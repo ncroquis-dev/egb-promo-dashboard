@@ -119,7 +119,7 @@
           <span><span class="dot" style="background: var(--blue)"></span>광고수익</span>
           <span><span class="dot" style="background: var(--red)"></span>순손익</span>
         </div>
-        <div class="note" style="margin-top: 6px">출금=오픈수×평균가치×일수−업글소모(선지출) · 광고수익=오픈수×eCPM/1000×일수 · 순손익=광고수익−출금. 출금률 100% 가정.</div>
+        <div class="note" style="margin-top: 6px">출금=오픈수×평균가치×일수−업글소모(선지출) · 출금광고=출금액÷(평균가치×가방칸) · 보석추가광고=⌈(오픈수−하루상한)÷5⌉×일수 · 광고수익=(출금광고+보석추가광고)×eCPM÷1000 · 순손익=광고수익−출금. 출금률 100%·열쇠 충분 가정.</div>
       </div>
 
       <div id="result" style="display: none">
@@ -348,12 +348,19 @@
         $("simBagCost").textContent = "소모 " + won(bagSink) + "원";
         $("simDailyCost").textContent = "소모 " + won(dailySink) + "원";
         const perDay = opens * ev;
-        const adPerDay = (opens * ecpm) / 1000;
-        const payout = [], adRev = [], net = [];
+        const bagCap = 10 + bagN; // 가방 칸 = 기본 10 + 확장
+        const dailyCap = 50 + dailyN; // 하루 상한 = 기본 50 + 업글
+        // 하루 오픈수가 상한을 넘으면 초과분을 보석추가 광고(+5/회)로 채워야 함
+        const refillPerDay = opens > dailyCap ? Math.ceil((opens - dailyCap) / 5) : 0;
+        const ecpmV = ecpm / 1000;
+        const payout = [], adRev = [], net = [], wAdsArr = [], rAdsArr = [];
         for (let d = 1; d <= days; d++) {
           const p = Math.max(0, d * perDay - sink);
-          const a = d * adPerDay;
+          const wAds = ev > 0 ? p / (ev * bagCap) : 0; // 출금 광고(누적) = 출금액/(평균가치×가방칸)
+          const rAds = d * refillPerDay; // 보석추가 광고(누적)
+          const a = (wAds + rAds) * ecpmV;
           payout.push(p); adRev.push(a); net.push(a - p);
+          wAdsArr.push(wAds); rAdsArr.push(rAds);
         }
         const last = days - 1;
         const recoupDay = perDay > 0 ? Math.ceil(sink / perDay) : 0;
@@ -362,7 +369,11 @@
           won(payout[last]) + "원</b> · 광고수익 <b>" + won(adRev[last]) +
           "원</b> · 순손익 <b style=\"color:" +
           (net[last] >= 0 ? "var(--green)" : "var(--red)") + "\">" + won(net[last]) + "원</b>" +
-          (sink > 0 ? " · 첫 출금 <b>" + recoupDay + "일</b>" : "");
+          (sink > 0 ? " · 첫 출금 <b>" + recoupDay + "일</b>" : "") +
+          "<br>🎬 출금 광고 <b>" + Math.round(wAdsArr[last]).toLocaleString() +
+          "회</b> (가방 " + bagCap + "칸) · 보석추가 광고 <b>" +
+          Math.round(rAdsArr[last]).toLocaleString() + "회</b> (하루상한 " + dailyCap +
+          (refillPerDay ? ", 일 " + refillPerDay + "회 필요" : ", 여유") + ")";
         // 큰 금액은 '만' 단위로 압축해 라벨이 겹치지 않게
         const compact = (v) => {
           const a = Math.abs(v);
