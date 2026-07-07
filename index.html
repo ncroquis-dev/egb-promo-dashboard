@@ -463,6 +463,9 @@
           dates,
           true,
         );
+        // 최초 로딩 시 맨 오른쪽(오늘)이 보이도록 스크롤
+        const tc = $("trendChart");
+        tc.scrollLeft = tc.scrollWidth;
       }
 
       function flow(w, b, c) {
