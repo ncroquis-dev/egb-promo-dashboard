@@ -245,7 +245,8 @@
         <h2>💎 보석 가치 계산기 <span style="font-size: 12px; color: var(--grey400); font-weight: 400">등장 확률 → 상자 1회당 기대 보석 가치</span></h2>
         <div id="gemCalc"></div>
         <div id="gemCalcResult" style="margin-top: 12px; font-size: 15px; color: var(--grey800)"></div>
-        <div class="note" style="margin-top: 6px">각 등급의 등장 확률(%)과 가치(원)를 넣으면 상자 1회당 기대 가치(EV)를 계산해요. 이 값을 위 출금 시뮬의 '보석 평균가치'에 넣어 쓰면 돼요.</div>
+        <button id="gemReset" type="button" style="margin-top: 10px; width: auto; padding: 8px 14px; font-size: 13px; background: var(--grey200); color: var(--grey800)">서버 값으로 초기화</button>
+        <div class="note" style="margin-top: 8px">각 등급의 등장 확률(%)과 가치(원)를 넣으면 상자 1회당 기대 가치(EV)를 계산해요. 이 값을 위 출금 시뮬의 '보석 평균가치'에 넣어 쓰면 돼요. '서버 값으로 초기화'는 불러오기한 실제 서버 등급값으로 되돌려요(미로드 시 기본값).</div>
       </div>
     </div>
 
@@ -410,13 +411,15 @@
       }
 
       // 보석 가치 계산기: 등급별 확률(%)·가치(원) → 상자 1회당 기대 가치(EV)
+      // 기본값(라이브 서버 gem_grades 기준). 불러오기 시 실제 서버값으로 갱신됨.
       const GEM_EV = [
-        { name: "동화", prob: 40, value: 1 },
-        { name: "은화", prob: 38, value: 2 },
-        { name: "금화", prob: 12, value: 3 },
+        { name: "동화", prob: 45, value: 1 },
+        { name: "은화", prob: 35, value: 2 },
+        { name: "금화", prob: 10, value: 3 },
         { name: "백금", prob: 7, value: 5 },
         { name: "다이아", prob: 3, value: 10 },
       ];
+      let serverGems = null; // 불러오기로 받은 서버 실제 등급값
       function buildGemCalc() {
         const el = $("gemCalc");
         el.innerHTML = "";
@@ -445,6 +448,13 @@
         GEM_EV.forEach((_, i) => {
           $("gp" + i).addEventListener("input", calcGemEv);
           $("gv" + i).addEventListener("input", calcGemEv);
+        });
+        calcGemEv();
+      }
+      function applyGemValues(list) {
+        list.forEach((g, i) => {
+          if ($("gp" + i)) $("gp" + i).value = Math.round((Number(g.prob) || 0) * 100) / 100;
+          if ($("gv" + i)) $("gv" + i).value = Number(g.value) || 0;
         });
         calcGemEv();
       }
@@ -708,6 +718,16 @@
             (wd ? (cons / wd) * 100 : 0).toFixed(2) + "%";
           recoupTypes(d.recoupByType || {}, users);
           renderTrend(d.nruDaily, d.dauDaily);
+          // 보석 계산기: 서버 실제 등급값 반영(확률 = weight/합계×100)
+          if (Array.isArray(d.gemGrades) && d.gemGrades.length) {
+            const sum = d.gemGrades.reduce((s, g) => s + (Number(g.weight) || 0), 0);
+            serverGems = d.gemGrades.map((g) => ({
+              name: g.name,
+              prob: sum ? (Number(g.weight) / sum) * 100 : 0,
+              value: Number(g.value) || 0,
+            }));
+            applyGemValues(serverGems);
+          }
 
           // 시뮬레이션 자동 세팅: eCPM=불러오기 값, 오픈수·업글횟수=유저 평균
           const rct = d.recoupByType || {};
@@ -773,6 +793,9 @@
       );
       renderSim();
       buildGemCalc();
+      $("gemReset").addEventListener("click", () =>
+        applyGemValues(serverGems || GEM_EV),
+      );
     </script>
   </body>
 </html>
