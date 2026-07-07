@@ -488,7 +488,6 @@
           }
           $("kAvgVal").textContent = won(d.avgValuePerUser) + "원";
           $("kAvgValDaily").textContent = "일 평균 " + won(d.avgDailyValuePerUser) + "원";
-          const maxOpens = Number(d.maxUserOpens) || 0;
           const totalOpens = Number(d.totalDrawnCount) || 0;
           const openPct = (n) =>
             (totalOpens ? (n / totalOpens) * 100 : 0).toFixed(1);
