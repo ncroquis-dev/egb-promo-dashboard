@@ -235,6 +235,14 @@
           </div>
         </div>
       </div>
+
+      <!-- 보석 가치 계산기 (등장확률 → 상자 1회당 EV) -->
+      <div class="card">
+        <h2>💎 보석 가치 계산기 <span style="font-size: 12px; color: var(--grey400); font-weight: 400">등장 확률 → 상자 1회당 기대 보석 가치</span></h2>
+        <div id="gemCalc"></div>
+        <div id="gemCalcResult" style="margin-top: 12px; font-size: 15px; color: var(--grey800)"></div>
+        <div class="note" style="margin-top: 6px">각 등급의 등장 확률(%)과 가치(원)를 넣으면 상자 1회당 기대 가치(EV)를 계산해요. 이 값을 위 출금 시뮬의 '보석 평균가치'에 넣어 쓰면 돼요.</div>
+      </div>
     </div>
 
     <script>
@@ -393,6 +401,63 @@
           dayLabels,
           true,
         );
+      }
+
+      // 보석 가치 계산기: 등급별 확률(%)·가치(원) → 상자 1회당 기대 가치(EV)
+      const GEM_EV = [
+        { name: "동화", prob: 40, value: 1 },
+        { name: "은화", prob: 38, value: 2 },
+        { name: "금화", prob: 12, value: 3 },
+        { name: "백금", prob: 7, value: 5 },
+        { name: "다이아", prob: 3, value: 10 },
+      ];
+      function buildGemCalc() {
+        const el = $("gemCalc");
+        el.innerHTML = "";
+        const head = document.createElement("div");
+        head.style.cssText =
+          "display:flex;gap:8px;align-items:center;font-size:12px;color:var(--grey400);padding:2px 0";
+        head.innerHTML =
+          '<span style="flex:1">등급</span>' +
+          '<span style="width:80px;text-align:center">확률(%)</span>' +
+          '<span style="width:80px;text-align:center">가치(원)</span>' +
+          '<span style="width:74px;text-align:right">기여</span>';
+        el.appendChild(head);
+        GEM_EV.forEach((g, i) => {
+          const row = document.createElement("div");
+          row.style.cssText =
+            "display:flex;gap:8px;align-items:center;padding:5px 0;border-top:1px solid var(--grey200)";
+          row.innerHTML =
+            '<span style="flex:1;font-size:13px;color:var(--grey700)">' + g.name + "</span>" +
+            '<input type="number" id="gp' + i + '" value="' + g.prob +
+            '" step="0.1" style="width:80px;text-align:right">' +
+            '<input type="number" id="gv' + i + '" value="' + g.value +
+            '" style="width:80px;text-align:right">' +
+            '<span id="gc' + i + '" style="width:74px;text-align:right;font-size:13px;color:var(--grey600)">0원</span>';
+          el.appendChild(row);
+        });
+        GEM_EV.forEach((_, i) => {
+          $("gp" + i).addEventListener("input", calcGemEv);
+          $("gv" + i).addEventListener("input", calcGemEv);
+        });
+        calcGemEv();
+      }
+      function calcGemEv() {
+        let ev = 0, ptot = 0;
+        GEM_EV.forEach((_, i) => {
+          const p = Number($("gp" + i).value) || 0;
+          const v = Number($("gv" + i).value) || 0;
+          const contrib = (p / 100) * v;
+          ev += contrib;
+          ptot += p;
+          $("gc" + i).textContent = contrib.toFixed(3) + "원";
+        });
+        const warn =
+          Math.abs(ptot - 100) > 0.01
+            ? ' <span style="color:var(--red)">(확률 합 ' + ptot.toFixed(1) + "% ≠ 100%)</span>"
+            : ' <span style="color:var(--grey400)">(확률 합 ' + ptot.toFixed(1) + "%)</span>";
+        $("gemCalcResult").innerHTML =
+          "상자 1회당 기대 가치 <b>" + ev.toFixed(3) + "원</b>" + warn;
       }
 
       function bars(el, list, color) {
@@ -696,6 +761,7 @@
         (id) => $(id).addEventListener("input", renderSim),
       );
       renderSim();
+      buildGemCalc();
     </script>
   </body>
 </html>
