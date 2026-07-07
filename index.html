@@ -141,7 +141,7 @@
           </div>
           <div class="kpis" style="margin-top: 12px">
             <div class="kpi"><div class="l" style="margin-bottom: 4px">최다 오픈 유저 (상위 5)</div><div id="kTopOpens"></div><div class="s">(오픈수, 비율)</div></div>
-            <div class="kpi"><div class="l" style="margin-bottom: 4px">└ 그 유저 일 평균</div><div id="kTopDailies"></div><div class="s">(오픈수/활동일)</div></div>
+            <div class="kpi"><div class="l" style="margin-bottom: 4px">└ 그 유저 일 평균</div><div id="kTopDailies"></div><div class="s">(일 오픈수, 획득 포인트)</div></div>
           </div>
           <div style="margin-top: 14px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap">
             <div id="topPie"></div>
@@ -758,7 +758,9 @@
             .map(
               (row) =>
                 '<div style="' + lineStyle + '">' + row.rank + "위 " +
-                (Number(row.daily) || 0).toLocaleString() + "</div>",
+                (Number(row.daily) || 0).toLocaleString() +
+                ' <span style="color:var(--grey400);font-weight:400">(' +
+                won(row.dailyValue) + "원)</span></div>",
             )
             .join("");
           renderTopPie(d.topUsers, d.totalDrawnCount);
