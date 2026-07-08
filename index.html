@@ -91,24 +91,24 @@
         <h2>🧮 출금 시뮬레이션 <span style="font-size: 12px; color: var(--grey400); font-weight: 400">가정 기반 예측</span></h2>
         <div class="row">
           <div><label>하루 오픈수</label><input id="simOpens" type="number" value="20" /></div>
-          <div><label>보석 평균가치(원)</label><input id="simEV" type="number" value="2.1" step="0.1" /></div>
+          <div><label>보석 평균가치(원)</label><input id="simEV" type="number" value="1.75" step="0.05" /></div>
           <div><label>eCPM(원)</label><input id="simEcpm" type="number" value="528" /></div>
         </div>
         <div class="row">
           <div><label>기간(일)</label><input id="simDays" type="number" value="30" /></div>
           <div>
-            <label>최대 열쇠 업글 (≤40)</label>
-            <input id="simKey" type="number" value="0" min="0" max="40" />
+            <label>열쇠 최대치 업글 <span style="color: var(--grey400)">(자동)</span></label>
+            <input id="simKey" type="number" value="0" readonly style="background: var(--grey100)" />
             <div class="s" id="simKeyCost" style="margin-top: 3px">소모 0원</div>
           </div>
           <div>
-            <label>가방 확장 (≤190)</label>
-            <input id="simBag" type="number" value="0" min="0" max="190" />
+            <label>가방 확장 (≤990)</label>
+            <input id="simBag" type="number" value="0" min="0" max="990" />
             <div class="s" id="simBagCost" style="margin-top: 3px">소모 0원</div>
           </div>
           <div>
-            <label>하루 상한 업글 (≤50)</label>
-            <input id="simDaily" type="number" value="0" min="0" max="50" />
+            <label>보석 최대치 업글 <span style="color: var(--grey400)">(자동)</span></label>
+            <input id="simDaily" type="number" value="0" readonly style="background: var(--grey100)" />
             <div class="s" id="simDailyCost" style="margin-top: 3px">소모 0원</div>
           </div>
         </div>
@@ -177,8 +177,9 @@
           <div class="flowleg" style="margin-top: 6px">
             <span><span class="dot" style="background: #3182f6"></span>신규 (NRU)</span>
             <span><span class="dot" style="background: #15b877"></span>활성 (DAU)</span>
+            <span><span class="dot" style="background: #f59e0b"></span>상자 오픈 (우측 축)</span>
           </div>
-          <div class="note" style="margin-top: 6px">※ DAU는 오늘부터 정확. 이전 날짜는 백필(마지막 활동일 기준)이라 과소일 수 있어요.</div>
+          <div class="note" style="margin-top: 6px">※ DAU는 오늘부터 정확. 이전 날짜는 백필(마지막 활동일 기준)이라 과소일 수 있어요. 상자 오픈 수는 집계 시작 이후부터 기록돼요(오픈 수는 값이 커서 우측 축 기준).</div>
         </div>
 
         <!-- 보석 등급별 -->
@@ -275,13 +276,19 @@
       } catch {}
 
       // ── 출금 시뮬레이션 (앱의 비용 곡선을 그대로 반영) ──
+      // 열쇠 최대치: 시작 10·상한 80. 5칸 밴드 2/4/6/8/10/15/20/25/30/35/40/45/50/55.
       function keyCapCost(cap) {
-        if (cap < 35) return 2; if (cap < 40) return 4; if (cap < 45) return 6;
-        if (cap < 50) return 8; if (cap < 55) return 10; if (cap < 60) return 15;
-        if (cap < 65) return 20; if (cap < 70) return 25; return null;
+        if (cap < 15) return 2; if (cap < 20) return 4; if (cap < 25) return 6;
+        if (cap < 30) return 8; if (cap < 35) return 10; if (cap < 40) return 15;
+        if (cap < 45) return 20; if (cap < 50) return 25; if (cap < 55) return 30;
+        if (cap < 60) return 35; if (cap < 65) return 40; if (cap < 70) return 45;
+        if (cap < 75) return 50; if (cap < 80) return 55; return null;
       }
-      const bagCost = (cap) => (cap < 200 ? 2 * Math.ceil((cap - 9) / 10) : null);
-      const dailyCost = (cap) => (cap < 100 ? 10 : null);
+      // 가방: 칸당 5원 flat, 상한 1000.
+      const bagCost = (cap) => (cap < 1000 ? 5 : null);
+      // 보석 최대치: 시작 20·상한 120. 20~24=5, 5칸마다 +5, 최대 100(115~119).
+      const dailyCost = (cap) =>
+        cap >= 120 ? null : Math.min(100, 5 * (Math.floor((Math.max(cap, 20) - 20) / 5) + 1));
       // base부터 n번 업그레이드했을 때 누적 소모(원)
       function catSink(costFn, base, n) {
         let s = 0, c = base;
@@ -302,11 +309,19 @@
           padB = hasX ? (showValues ? 34 : 26) : 16;
         // 값 표시 모드: 포인트당 폭을 넉넉히 줘서 가로 스크롤되게 함
         const W = showValues ? Math.max(660, days * 48) : 640;
-        const all = series.flatMap((s) => s.data);
-        let mn = Math.min(0, ...all), mx = Math.max(0, ...all);
+        // scaleOwn 시리즈는 자체 축으로(값이 큰 오픈 수 등), 나머지는 공유 축으로.
+        const shared = series.filter((s) => !s.scaleOwn).flatMap((s) => s.data);
+        let mn = Math.min(0, ...shared), mx = Math.max(0, ...shared);
         if (mx === mn) mx = mn + 1;
+        const scaleOf = (s) => {
+          if (!s.scaleOwn) return { mn, mx };
+          let a = Math.min(0, ...s.data), b = Math.max(0, ...s.data);
+          if (b === a) b = a + 1;
+          return { mn: a, mx: b };
+        };
         const X = (i) => padL + (days <= 1 ? 0 : (i / (days - 1)) * (W - padL - padR));
         const Y = (v) => padT + (1 - (v - mn) / (mx - mn)) * (H - padT - padB);
+        const Ys = (v, sc) => padT + (1 - (v - sc.mn) / (sc.mx - sc.mn)) * (H - padT - padB);
         const zy = Y(0);
         const svgStyle = showValues
           ? "display:block;width:" + W + "px;height:" + H + "px"
@@ -319,6 +334,13 @@
           '" y2="' + zy + '" stroke="#d0d5dd" stroke-dasharray="3"/>';
         svg += '<text x="2" y="' + (Y(mx) + 8) + '" font-size="11" fill="#8b95a1">' + fmt(mx) + '</text>';
         svg += '<text x="2" y="' + (zy + 3) + '" font-size="11" fill="#8b95a1">0</text>';
+        // 자체 축 시리즈(오픈 수)의 최대값을 오른쪽 위에 그 색으로 표시.
+        const ownS = series.find((s) => s.scaleOwn);
+        if (ownS) {
+          svg += '<text x="' + (W - padR) + '" y="' + (Y(mx) + 8) +
+            '" font-size="11" fill="' + ownS.color + '" text-anchor="end">' +
+            fmt(scaleOf(ownS).mx) + "</text>";
+        }
         if (mn < 0)
           svg += '<text x="2" y="' + (Y(mn) - 2) + '" font-size="11" fill="#8b95a1">' + fmt(mn) + '</text>';
         if (hasX) {
@@ -331,14 +353,16 @@
           }
         }
         for (const s of series) {
-          const pts = s.data.map((v, i) => X(i).toFixed(1) + "," + Y(v).toFixed(1)).join(" ");
+          const sc = scaleOf(s);
+          const pts = s.data.map((v, i) => X(i).toFixed(1) + "," + Ys(v, sc).toFixed(1)).join(" ");
           svg += '<polyline fill="none" stroke="' + s.color + '" stroke-width="2" points="' + pts + '"/>';
         }
         if (showValues) {
           series.forEach((s, si) => {
+            const sc = scaleOf(s);
             const dy = si % 2 === 0 ? -7 : 15; // 선 번갈아 위/아래(겹침 방지)
             s.data.forEach((v, i) => {
-              const x = X(i).toFixed(1), y = Y(v);
+              const x = X(i).toFixed(1), y = Ys(v, sc);
               svg += '<circle cx="' + x + '" cy="' + y.toFixed(1) +
                 '" r="3" fill="' + s.color + '"/>';
               svg += '<text x="' + x + '" y="' + (y + dy).toFixed(1) +
@@ -355,28 +379,41 @@
         const ev = Number($("simEV").value) || 0;
         const ecpm = Number($("simEcpm").value) || 0;
         const days = Math.max(1, Math.min(120, Math.floor(Number($("simDays").value) || 30)));
-        const keyN = clampInt("simKey", 40);
-        const bagN = clampInt("simBag", 190);
-        const dailyN = clampInt("simDaily", 50);
-        const keySink = catSink(keyCapCost, 30, keyN);
+        const bagN = clampInt("simBag", 990);
+
+        // 하루 오픈수 → 필요한 열쇠/보석 최대치 업글을 자동 산출.
+        // 전제: 하루 1회 접속(열쇠·보석이 각 최대치까지 리필) + 광고 2회씩(+5×2)로 열쇠+10·보석+10.
+        //   → 하루 오픈 가능 = 최대치 + 광고10. 부족분만큼만 최대치를 올려요(최소 업글).
+        const KEY_START = 10, KEY_MAX = 80, GEM_START = 20, GEM_MAX = 120, AD_BONUS = 10;
+        const needKeyCap = Math.max(KEY_START, Math.min(KEY_MAX, opens - AD_BONUS));
+        const needGemCap = Math.max(GEM_START, Math.min(GEM_MAX, opens - AD_BONUS));
+        const keyN = needKeyCap - KEY_START;
+        const dailyN = needGemCap - GEM_START;
+        const keyAdsPerDay = opens > KEY_START ? 2 : 0; // 열쇠 광고 +5×2
+        const gemAdsPerDay = opens > GEM_START ? 2 : 0; // 보석 광고 +5×2
+        const maxOpensSupported = Math.min(KEY_MAX, GEM_MAX) + AD_BONUS; // 90/일
+        const overCapacity = opens > maxOpensSupported;
+
+        const keySink = catSink(keyCapCost, KEY_START, keyN);
         const bagSink = catSink(bagCost, 10, bagN);
-        const dailySink = catSink(dailyCost, 50, dailyN);
+        const dailySink = catSink(dailyCost, GEM_START, dailyN);
         const sink = keySink + bagSink + dailySink;
-        $("simKeyCost").textContent = "소모 " + won(keySink) + "원";
+        // 자동 산출값을 입력칸에 반영(읽기전용 표시)
+        $("simKey").value = keyN;
+        $("simDaily").value = dailyN;
+        $("simKeyCost").textContent = "×" + keyN + " · 소모 " + won(keySink) + "원";
         $("simBagCost").textContent = "소모 " + won(bagSink) + "원";
-        $("simDailyCost").textContent = "소모 " + won(dailySink) + "원";
+        $("simDailyCost").textContent = "×" + dailyN + " · 소모 " + won(dailySink) + "원";
         const perDay = opens * ev;
         const bagCap = 10 + bagN; // 가방 칸 = 기본 10 + 확장
-        const dailyCap = 50 + dailyN; // 하루 상한 = 기본 50 + 업글
-        // 하루 오픈수가 상한을 넘으면 초과분을 보석추가 광고(+5/회)로 채워야 함
-        const refillPerDay = opens > dailyCap ? Math.ceil((opens - dailyCap) / 5) : 0;
+        const refillAdsPerDay = keyAdsPerDay + gemAdsPerDay; // 열쇠+보석 리필 광고 뷰/일
         const ecpmV = ecpm / 1000;
         const payout = [], adRev = [], net = [], oAdsArr = [], wAdsArr = [], rAdsArr = [];
         for (let d = 1; d <= days; d++) {
           const p = Math.max(0, d * perDay - sink);
           const oAds = d * opens; // 오픈 광고(누적) = 오픈당 1회
           const wAds = ev > 0 ? p / (ev * bagCap) : 0; // 출금 광고(누적) = 출금액/(평균가치×가방칸)
-          const rAds = d * refillPerDay; // 보석추가 광고(누적)
+          const rAds = d * refillAdsPerDay; // 리필 광고(누적)
           const a = (oAds + wAds + rAds) * ecpmV;
           payout.push(p); adRev.push(a); net.push(a - p);
           oAdsArr.push(oAds); wAdsArr.push(wAds); rAdsArr.push(rAds);
@@ -384,16 +421,22 @@
         const last = days - 1;
         const recoupDay = perDay > 0 ? Math.ceil(sink / perDay) : 0;
         $("simSummary").innerHTML =
-          "업글 소모 <b>" + won(sink) + "원</b> · " + days + "일: 출금 <b>" +
+          (overCapacity
+            ? '<div style="color:var(--red);margin-bottom:4px">⚠ 하루 ' + maxOpensSupported +
+              '회 초과는 하루 1회 접속 모델로 불가(연속 접속·리필 필요)</div>'
+            : "") +
+          "필요 업글 🔑열쇠 <b>×" + keyN + "</b>(최대 " + needKeyCap + ") · 💎보석 <b>×" +
+          dailyN + "</b>(최대 " + needGemCap + ") · 🎒가방 ×" + bagN +
+          "<br>업글 소모 <b>" + won(sink) + "원</b> · " + days + "일: 출금 <b>" +
           won(payout[last]) + "원</b> · 광고수익 <b>" + won(adRev[last]) +
           "원</b> · 순손익 <b style=\"color:" +
           (net[last] >= 0 ? "var(--green)" : "var(--red)") + "\">" + won(net[last]) + "원</b>" +
           (sink > 0 ? " · 첫 출금 <b>" + recoupDay + "일</b>" : "") +
           "<br>🎬 오픈 광고 <b>" + Math.round(oAdsArr[last]).toLocaleString() +
           "회</b> · 출금 광고 <b>" + Math.round(wAdsArr[last]).toLocaleString() +
-          "회</b> (가방 " + bagCap + "칸) · 보석추가 광고 <b>" +
-          Math.round(rAdsArr[last]).toLocaleString() + "회</b> (하루상한 " + dailyCap +
-          (refillPerDay ? ", 일 " + refillPerDay + "회 필요" : ", 여유") + ")";
+          "회</b> (가방 " + bagCap + "칸) · 리필 광고 <b>" +
+          Math.round(rAdsArr[last]).toLocaleString() + "회</b> (일 " + refillAdsPerDay +
+          "회: 열쇠" + keyAdsPerDay + "+보석" + gemAdsPerDay + ")";
         // 큰 금액은 '만' 단위로 압축해 라벨이 겹치지 않게
         const compact = (v) => {
           const a = Math.abs(v);
@@ -549,26 +592,33 @@
         }
       }
 
-      function renderTrend(nruList, dauList) {
+      function renderTrend(nruList, dauList, opensList) {
         const nru = Array.isArray(nruList) ? nruList : [];
         const dau = Array.isArray(dauList) ? dauList : [];
+        const opens = Array.isArray(opensList) ? opensList : [];
         const dauMap = {};
         dau.forEach((x) => (dauMap[x.date] = Number(x.count) || 0));
+        const opensMap = {};
+        opens.forEach((x) => (opensMap[x.date] = Number(x.count) || 0));
         const dates = nru.map((x) => x.date);
         const nruData = nru.map((x) => Number(x.count) || 0);
         const dauData = nru.map((x) => dauMap[x.date] || 0);
+        const opensData = nru.map((x) => opensMap[x.date] || 0);
         const nTot = nruData.reduce((s, v) => s + v, 0);
         const dToday = dauData[dauData.length - 1] || 0;
+        const oToday = opensData[opensData.length - 1] || 0;
         $("trendSummary").innerHTML =
           "최근 " + dates.length + "일 신규 <b>" + nTot.toLocaleString() +
           "명</b> (일평균 " + (dates.length ? nTot / dates.length : 0).toFixed(1) +
-          ") · 오늘 활성 <b>" + dToday.toLocaleString() + "명</b>";
+          ") · 오늘 활성 <b>" + dToday.toLocaleString() + "명</b> · 오늘 오픈 <b>" +
+          oToday.toLocaleString() + "회</b>";
         lineChart(
           $("trendChart"),
           dates.length,
           [
             { color: "#3182f6", data: nruData },
             { color: "#15b877", data: dauData },
+            { color: "#f59e0b", data: opensData, scaleOwn: true },
           ],
           (v) => Math.round(v).toLocaleString(),
           dates,
@@ -775,7 +825,7 @@
           $("rcVsWithdraw").textContent =
             (wd ? (cons / wd) * 100 : 0).toFixed(2) + "%";
           recoupTypes(d.recoupByType || {}, users);
-          renderTrend(d.nruDaily, d.dauDaily);
+          renderTrend(d.nruDaily, d.dauDaily, d.opensDaily);
           // 보석 계산기: 서버 실제 등급값 반영(확률 = weight/합계×100)
           if (Array.isArray(d.gemGrades) && d.gemGrades.length) {
             const sum = d.gemGrades.reduce((s, g) => s + (Number(g.weight) || 0), 0);
@@ -793,9 +843,8 @@
             users ? Math.round((Number((rct[k] || {}).count) || 0) / users) : 0;
           $("simEcpm").value = ecpm;
           $("simOpens").value = Math.round(Number(d.avgDailyOpensPerUser) || 0) || 1;
-          $("simKey").value = avgCount("keycap");
+          // 열쇠·보석 최대치 업글은 하루 오픈수에서 자동 산출(renderSim). 가방만 데이터 평균으로.
           $("simBag").value = avgCount("bag");
-          $("simDaily").value = avgCount("daily");
           renderSim();
 
           // 등급별 + 보석당 평균 가치(전체 기간)
@@ -846,7 +895,7 @@
       $("load").addEventListener("click", load);
 
       // 시뮬레이션: 입력 바뀌면 즉시 다시 그려요.
-      ["simOpens", "simEV", "simEcpm", "simDays", "simKey", "simBag", "simDaily"].forEach(
+      ["simOpens", "simEV", "simEcpm", "simDays", "simBag"].forEach(
         (id) => $(id).addEventListener("input", renderSim),
       );
       renderSim();
