@@ -915,7 +915,18 @@
           bars($("outByApp"), p.outByApp, "var(--blue)");
           daily($("daily"), p.daily);
 
-          // 광고 그룹 비중 편집기 로드
+          // 결과 영역을 먼저 표시해야 렌더된 차트에 레이아웃이 잡혀
+          // renderTrend의 '오늘로 스크롤'이 동작해요(숨김 상태면 scrollWidth=0).
+          $("result").style.display = "block";
+          // 표시 직후 트렌드 차트를 맨 오른쪽(오늘)으로 스크롤
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              const tc = $("trendChart");
+              if (tc) tc.scrollLeft = tc.scrollWidth;
+            });
+          });
+
+          // 광고 그룹 비중 편집기 로드(네트워크 대기 — 위 표시/스크롤 이후에 진행)
           adwCreds = { url, anon, admin };
           try {
             const w = await callAction(url, anon, admin, { action: "ad_weights_get" });
@@ -925,8 +936,6 @@
               '<span style="color:var(--red)">비중 불러오기 실패: ' +
               (e && e.message ? e.message : e) + " (서버에 ad_group_weights 미배포일 수 있어요)</span>";
           }
-
-          $("result").style.display = "block";
         } catch (e) {
           $("err").textContent = "불러오기 실패: " + (e && e.message ? e.message : e);
         } finally {
