@@ -244,6 +244,19 @@
             <span><span class="dot" style="background: var(--blue)"></span>유출</span>
           </div>
         </div>
+
+        <!-- 광고 그룹 노출 비중 (서버 ad_group_weights 편집) -->
+        <div class="card">
+          <h2>🎯 광고 그룹 노출 비중 <span style="font-size: 12px; color: var(--grey400); font-weight: 400">가중 랜덤 · 서버 저장(클라 재배포 불필요)</span></h2>
+          <div class="note" style="margin: 0 0 10px">
+            weight 높을수록 자주 노출돼요(기본 1). 오른쪽 %는 이 목록 전체 대비 예상 노출 비중이에요.
+            저장하면 즉시 서버에 반영되고, 앱은 다음 상태조회부터 새 비중으로 광고를 돌려요.
+          </div>
+          <div id="adwList"></div>
+          <div id="adwSummary" style="font-size: 12px; color: var(--grey600); margin-top: 8px"></div>
+          <button id="adwSave" style="margin-top: 10px">비중 저장</button>
+          <div id="adwMsg" style="font-size: 12px; margin-top: 6px"></div>
+        </div>
       </div>
 
       <!-- 보석 가치 계산기 (등장확률 → 상자 1회당 EV) -->
@@ -902,6 +915,17 @@
           bars($("outByApp"), p.outByApp, "var(--blue)");
           daily($("daily"), p.daily);
 
+          // 광고 그룹 비중 편집기 로드
+          adwCreds = { url, anon, admin };
+          try {
+            const w = await callAction(url, anon, admin, { action: "ad_weights_get" });
+            renderAdw(Array.isArray(w) ? w : []);
+          } catch (e) {
+            $("adwMsg").innerHTML =
+              '<span style="color:var(--red)">비중 불러오기 실패: ' +
+              (e && e.message ? e.message : e) + " (서버에 ad_group_weights 미배포일 수 있어요)</span>";
+          }
+
           $("result").style.display = "block";
         } catch (e) {
           $("err").textContent = "불러오기 실패: " + (e && e.message ? e.message : e);
@@ -911,6 +935,121 @@
       }
 
       $("load").addEventListener("click", load);
+
+      // ── 광고 그룹 노출 비중 편집기 ─────────────────────────────
+      // ★ 목록은 앱 config(apps/gem-box/src/config.ts 의 ads.fullScreen)와 동기화 유지.
+      const AD_GROUPS = [
+          "ait.v2.live.b9a83080d9db476d",
+          "ait.v2.live.d04328fbe14b45a2",
+          "ait.v2.live.b1c62029c1264c07",
+          "ait.v2.live.6e788ed5dcf04f70",
+          "ait.v2.live.e9996f70d8db4dad",
+          "ait.v2.live.d354d96ca89f4b17",
+          "ait.v2.live.d149ae24f667481c",
+          "ait.v2.live.75ad8621f2554922",
+          "ait.v2.live.2c2781ad171d4762",
+          "ait.v2.live.8ee194fe226b4e1b",
+          "ait.v2.live.2d879134e33841e4",
+          "ait.v2.live.c08afbdb3bbe46d6",
+          "ait.v2.live.d93e390ca16e4f18",
+          "ait.v2.live.8a75ad19ad8a4180",
+          "ait.v2.live.e38cad499e5d41df",
+          "ait.v2.live.1f2116719df0460e",
+          "ait.v2.live.b9e7230b06e34877",
+          "ait.v2.live.a22cfdcc7879489e",
+          "ait.v2.live.352c2583c518477b",
+          "ait.v2.live.a98441398dae4f04",
+          "ait.v2.live.f544309f58504c7e",
+          "ait.v2.live.4f3c2d57b03b43ec",
+          "ait.v2.live.232ee4b4ba824aaa",
+          "ait.v2.live.4e835500ddf44622",
+          "ait.v2.live.6a797d8bcd324aa0",
+          "ait.v2.live.0b911625ec894cd3",
+          "ait.v2.live.a76b48c8d32640ab",
+          "ait.v2.live.90ae1b77587d44f8",
+      ];
+      let adwCreds = null;
+      const adwShort = (id) => id.replace(/^ait\.v2\.live\./, "");
+
+      function renderAdw(serverRows) {
+        const wmap = {};
+        (serverRows || []).forEach((r) => {
+          if (r && r.group_id) wmap[r.group_id] = Number(r.weight);
+        });
+        const ids = AD_GROUPS.slice();
+        (serverRows || []).forEach((r) => {
+          if (r && r.group_id && !ids.includes(r.group_id)) ids.push(r.group_id);
+        });
+        $("adwList").innerHTML = ids
+          .map((id) => {
+            const w = wmap[id] != null ? wmap[id] : 1;
+            const extra = AD_GROUPS.includes(id) ? "" : " ⚠목록외";
+            return (
+              '<div class="barrow" style="gap:8px">' +
+              '<span class="name" style="width:auto;flex:1;font-size:12px">' +
+              adwShort(id) + extra + "</span>" +
+              '<input class="adw-w" data-id="' + id +
+              '" type="number" min="0" step="1" value="' + w +
+              '" style="width:64px;margin:0;padding:6px 8px" />' +
+              '<span class="adw-pct" style="width:56px;text-align:right;font-size:12px;color:var(--grey600)">0%</span>' +
+              "</div>"
+            );
+          })
+          .join("");
+        $("adwList")
+          .querySelectorAll(".adw-w")
+          .forEach((el) => el.addEventListener("input", adwRecalc));
+        adwRecalc();
+      }
+
+      function adwRecalc() {
+        const inputs = Array.from($("adwList").querySelectorAll(".adw-w"));
+        let total = 0;
+        const vals = inputs.map((el) => {
+          const v = Math.max(0, Math.floor(Number(el.value) || 0));
+          total += v;
+          return v;
+        });
+        inputs.forEach((el, i) => {
+          const pct = total > 0 ? (vals[i] / total) * 100 : 0;
+          const cell = el.parentElement.querySelector(".adw-pct");
+          cell.textContent = pct.toFixed(1) + "%";
+          cell.style.color =
+            vals[i] > 1 ? "var(--green)" : vals[i] === 0 ? "var(--red)" : "var(--grey600)";
+        });
+        const boosted = vals.filter((v) => v > 1).length;
+        const boostedSum = vals.reduce((s, v) => s + (v > 1 ? v : 0), 0);
+        const boostedPct = total > 0 ? (boostedSum / total) * 100 : 0;
+        $("adwSummary").textContent =
+          "총 " + inputs.length + "개 · weight 합 " + total +
+          " · 상향 " + boosted + "개 = " + boostedPct.toFixed(1) + "%";
+      }
+
+      async function adwSave() {
+        if (adwCreds == null) return;
+        const rows = Array.from($("adwList").querySelectorAll(".adw-w")).map((el) => ({
+          group_id: el.dataset.id,
+          weight: Math.max(0, Math.floor(Number(el.value) || 0)),
+        }));
+        $("adwSave").disabled = true;
+        $("adwMsg").textContent = "저장 중…";
+        try {
+          const w = await callAction(adwCreds.url, adwCreds.anon, adwCreds.admin, {
+            action: "ad_weights_set",
+            weights: rows,
+          });
+          renderAdw(Array.isArray(w) ? w : []);
+          $("adwMsg").innerHTML =
+            '<span style="color:var(--green)">저장됐어요. 앱은 다음 상태조회부터 새 비중으로 노출해요.</span>';
+        } catch (e) {
+          $("adwMsg").innerHTML =
+            '<span style="color:var(--red)">저장 실패: ' +
+            (e && e.message ? e.message : e) + "</span>";
+        } finally {
+          $("adwSave").disabled = false;
+        }
+      }
+      $("adwSave").addEventListener("click", adwSave);
 
       // 시뮬레이션: 입력 바뀌면 즉시 다시 그려요.
       ["simOpens", "simEV", "simEcpm", "simDays", "simBag"].forEach(
