@@ -91,7 +91,7 @@
         <h2>🧮 출금 시뮬레이션 <span style="font-size: 12px; color: var(--grey400); font-weight: 400">가정 기반 예측</span></h2>
         <div class="row">
           <div><label>하루 오픈수</label><input id="simOpens" type="number" value="20" /></div>
-          <div><label>보석 평균가치(원)</label><input id="simEV" type="number" value="1.75" step="0.05" /></div>
+          <div><label>보석 평균가치(원, 업글 전)</label><input id="simEV" type="number" value="1.75" step="0.05" /></div>
           <div><label>eCPM(원)</label><input id="simEcpm" type="number" value="528" /></div>
         </div>
         <div class="row">
@@ -376,7 +376,6 @@
       }
       function renderSim() {
         const opens = Number($("simOpens").value) || 0;
-        const ev = Number($("simEV").value) || 0;
         const ecpm = Number($("simEcpm").value) || 0;
         const days = Math.max(1, Math.min(120, Math.floor(Number($("simDays").value) || 30)));
         const bagN = clampInt("simBag", 990);
@@ -393,6 +392,20 @@
         const gemAdsPerDay = opens > GEM_START ? 2 : 0; // 보석 광고 +5×2
         const maxOpensSupported = Math.min(KEY_MAX, GEM_MAX) + AD_BONUS; // 90/일
         const overCapacity = opens > maxOpensSupported;
+
+        // 최대치 업글로 오른 등장 확률 → 보석 평균가치(EV) 상승분을 자동 반영.
+        //   보석 최대치+1 → 다이아 +0.01%p, 열쇠 최대치+1 → 백금 +0.01%p (동화에서 차감, 서버 open_chest와 동일).
+        //   ΔEV = 다이아상승비율×(v다이아−v동화) + 백금상승비율×(v백금−v동화)
+        const gvals = serverGems || GEM_EV;
+        const vBronze = Number((gvals[0] || {}).value) || 1;
+        const vPlat = Number((gvals[3] || {}).value) || 5;
+        const vDia = Number((gvals[4] || {}).value) || 10;
+        const diaBoostPP = (needGemCap - GEM_START) * 0.01; // 다이아 +%p
+        const platBoostPP = (needKeyCap - KEY_START) * 0.01; // 백금 +%p
+        const evBoost =
+          (diaBoostPP / 100) * (vDia - vBronze) + (platBoostPP / 100) * (vPlat - vBronze);
+        const evBase = Number($("simEV").value) || 0;
+        const ev = evBase + evBoost; // 유효 보석 평균가치(최대치 업글 반영)
 
         const keySink = catSink(keyCapCost, KEY_START, keyN);
         const bagSink = catSink(bagCost, 10, bagN);
@@ -427,6 +440,11 @@
             : "") +
           "필요 업글 🔑열쇠 <b>×" + keyN + "</b>(최대 " + needKeyCap + ") · 💎보석 <b>×" +
           dailyN + "</b>(최대 " + needGemCap + ") · 🎒가방 ×" + bagN +
+          "<br>보석가치 <b>" + ev.toFixed(3) + "원</b> (base " + evBase.toFixed(2) +
+          (evBoost > 0
+            ? " + 업글 <span style=\"color:var(--green)\">+" + evBoost.toFixed(3) + "</span>"
+            : "") +
+          " · 다이아+" + diaBoostPP.toFixed(2) + "%p·백금+" + platBoostPP.toFixed(2) + "%p)" +
           "<br>업글 소모 <b>" + won(sink) + "원</b> · " + days + "일: 출금 <b>" +
           won(payout[last]) + "원</b> · 광고수익 <b>" + won(adRev[last]) +
           "원</b> · 순손익 <b style=\"color:" +
