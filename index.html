@@ -509,6 +509,9 @@
         { name: "금화", prob: 10, value: 3 },
         { name: "백금", prob: 7, value: 5 },
         { name: "다이아", prob: 3, value: 10 },
+        // 꽝(0원): 서버 등급(동화~다이아, 인덱스 0~4)과 매핑이 어긋나지 않게 항상 맨 끝.
+        // 기본 확률 0이라 EV에 영향 없고, 꽝 확률을 넣으면 그만큼 기대가치가 낮아져요.
+        { name: "꽝", prob: 0, value: 0 },
       ];
       let serverGems = null; // 불러오기로 받은 서버 실제 등급값
       function buildGemCalc() {
