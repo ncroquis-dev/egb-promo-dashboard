@@ -968,8 +968,15 @@
           "ait.v2.live.a76b48c8d32640ab",
           "ait.v2.live.90ae1b77587d44f8",
       ];
+      // 광고 그룹 ID → 콘솔 이름(수동). 앱인토스가 이름 조회 API를 제공하지 않아 여기 직접 적어요.
+      // 채우는 만큼 대시보드에 이름이 굵게 표시되고, 없으면 짧은 ID만 보여요.
+      const AD_GROUP_NAMES = {
+        "ait.v2.live.90ae1b77587d44f8": "상자 열기 25 (콘텐츠)",
+      };
       let adwCreds = null;
       const adwShort = (id) => id.replace(/^ait\.v2\.live\./, "");
+      const adwEsc = (s) =>
+        String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
       function renderAdw(serverRows) {
         const wmap = {};
@@ -984,10 +991,15 @@
           .map((id) => {
             const w = wmap[id] != null ? wmap[id] : 1;
             const extra = AD_GROUPS.includes(id) ? "" : " ⚠목록외";
+            const nm = (AD_GROUP_NAMES[id] || "").trim();
+            const labelHtml = nm
+              ? '<b style="color:var(--grey800)">' + adwEsc(nm) +
+                '</b> <span style="color:var(--grey400);font-size:11px">' + adwShort(id) + "</span>"
+              : adwShort(id);
             return (
               '<div class="barrow" style="gap:8px">' +
               '<span class="name" style="width:auto;flex:1;font-size:12px">' +
-              adwShort(id) + extra + "</span>" +
+              labelHtml + extra + "</span>" +
               '<input class="adw-w" data-id="' + id +
               '" type="number" min="0" step="1" value="' + w +
               '" style="width:64px;margin:0;padding:6px 8px" />' +
