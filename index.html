@@ -806,6 +806,7 @@
         localStorage.setItem(LS, JSON.stringify({ url, anon, admin, ecpm, days }));
         if (!url || !anon || !admin) { $("err").textContent = "URL · Anon Key · Admin Secret 를 입력해주세요."; return; }
         if ((rFrom && !rTo) || (!rFrom && rTo)) { $("err").textContent = "기간은 시작·끝을 모두 지정하거나 모두 비워주세요."; return; }
+        if (useRange && rFrom < RANGE_MIN) { $("err").textContent = "기간 시작은 " + RANGE_MIN + "부터 가능해요(기간 데이터 유효 시작일). 그 이전은 '전체'로 보세요."; return; }
         if (useRange && rFrom > rTo) { $("err").textContent = "기간 시작이 끝보다 늦어요."; return; }
         $("load").disabled = true;
         try {
@@ -1005,6 +1006,12 @@
 
       $("load").addEventListener("click", load);
 
+      // 기간 롤업 데이터가 유효해지는 첫 날(첫 온전한 날). 이 이전은 획득/소모가 부분/0이라 시작일로 못 고르게 막아요.
+      // (전체 보기는 예외 — 누적 전체기간 지표라 제약 없음)
+      const RANGE_MIN = "2026-07-10";
+      $("rangeFrom").min = RANGE_MIN;
+      $("rangeTo").min = RANGE_MIN;
+
       // 기간 프리셋 버튼: 0=전체(비움), N=최근 N일. 클릭 시 날짜칸 설정 후 바로 불러오기.
       document.querySelectorAll(".rpreset").forEach((btn) => {
         btn.addEventListener("click", () => {
@@ -1020,8 +1027,17 @@
             const to = new Date();
             const from = new Date();
             from.setDate(from.getDate() - (n - 1));
-            $("rangeFrom").value = fmt(from);
-            $("rangeTo").value = fmt(to);
+            let fromStr = fmt(from);
+            if (fromStr < RANGE_MIN) fromStr = RANGE_MIN; // 데이터 시작일 이전은 시작일로 클램프
+            const toStr = fmt(to);
+            if (fromStr > toStr) {
+              $("err").textContent =
+                "기간 데이터는 " + RANGE_MIN + "부터 유효해요. 그 이후부터 조회할 수 있어요.";
+              return;
+            }
+            $("err").textContent = "";
+            $("rangeFrom").value = fromStr;
+            $("rangeTo").value = toStr;
           }
           if ($("url").value.trim()) load();
         });
