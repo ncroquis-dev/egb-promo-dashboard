@@ -570,6 +570,17 @@
           "상자 1회당 기대 가치 <b>" + ev.toFixed(3) + "원</b>" + warn;
       }
 
+      // 크로스프로모션 앱 코드 → 친숙한 이름(앱 config와 동기화). 없으면 코드 그대로.
+      const PROMO_APP_NAMES = {
+        coffee: "커피콩",
+        ddabak: "따박따박 월세받기",
+        gostopfreeno1: "캐시 고스톱",
+        gostoppure: "순수맞고: 캐시 모으기",
+        gostop3d: "고스톱 리그",
+        gostopland: "부동산 고스톱",
+      };
+      const promoAppName = (code) => PROMO_APP_NAMES[code] || code;
+
       function bars(el, list, color) {
         el.innerHTML = "";
         if (!list || list.length === 0) { el.innerHTML = '<div class="empty">데이터 없음</div>'; return; }
@@ -579,7 +590,7 @@
           row.className = "barrow";
           const pct = Math.round((x.count / max) * 100);
           row.innerHTML =
-            '<div class="name" title="' + x.app + '">' + x.app + "</div>" +
+            '<div class="name" title="' + x.app + '">' + promoAppName(x.app) + "</div>" +
             '<div class="track"><div class="fill" style="width:' + pct + "%;background:" + color + '"></div></div>' +
             '<div class="cnt">' + x.count + "</div>";
           el.appendChild(row);
