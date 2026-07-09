@@ -918,8 +918,13 @@
           $("avgGem").textContent = avgGem.toFixed(2) + "원";
           gradeBars($("grades"), d.drawnByGrade || {});
 
-          // 포인트 흐름
-          flow(Number(d.withdrawnPoints) || 0, Number(d.bagValue) || 0, Number(d.consumedPoints) || 0);
+          // 포인트 흐름 — 기간 모드에선 '가방'을 기간 획득−출금−소모(잔여)로, 전체 모드에선 현재 가방 스냅샷으로.
+          const flowWd = Number(d.withdrawnPoints) || 0;
+          const flowCons = Number(d.consumedPoints) || 0;
+          const flowBag = rangeMode
+            ? Math.max(0, (Number(d.totalDrawnValue) || 0) - flowWd - flowCons)
+            : (Number(d.bagValue) || 0);
+          flow(flowWd, flowBag, flowCons);
           // 소모 종류별 내역
           const ct = d.consumedByType || {};
           $("cKeycap").textContent = won(ct.keycap) + "원";
@@ -927,8 +932,10 @@
           $("cDaily").textContent = won(ct.daily) + "원";
           $("cChest").textContent = won(ct.chest) + "원";
 
-          // 수익 분석
-          const opens = Number(d.totalDrawnCount) || 0;
+          // 수익 분석 — 기간 모드 오픈수는 daily_active 기준(opensTotal, 이력 있음), 전체는 totalDrawnCount.
+          const opens = rangeMode
+            ? (Number(d.opensTotal) || 0)
+            : (Number(d.totalDrawnCount) || 0);
           const rev = Math.round((opens * ecpm) / 1000);
           const pay = Number(d.withdrawnPoints) || 0;
           const net = rev - pay;
