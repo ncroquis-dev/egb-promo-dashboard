@@ -605,7 +605,7 @@
         }
       }
 
-      function recoupTypes(rc, users) {
+      function recoupTypes(rc, users, rangeMode) {
         const CATS = [
           { k: "keycap", name: "🔑 최대 열쇠" },
           { k: "bag", name: "🎒 가방 확장" },
@@ -617,23 +617,31 @@
         const fmtCnt = (x) => (x >= 1 ? Math.round(x) : x.toFixed(1)); // 업그레이드 횟수
         for (const c of CATS) {
           const o = rc[c.k] || {};
-          const u = Number(o.users) || 0;
           const spent = Number(o.spent) || 0;
           const cnt = Number(o.count) || 0;
-          const pct = users ? (u / users) * 100 : 0;
-          const avgUser = u ? spent / u : 0; // 쓴 사람 평균 포인트
-          const avgAll = users ? spent / users : 0; // 전체 유저 평균 포인트
-          const cntUser = u ? cnt / u : 0; // 쓴 사람 평균 횟수
-          const cntAll = users ? cnt / users : 0; // 전체 유저 평균 횟수
           const row = document.createElement("div");
           row.style.cssText =
             "display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:7px 0;border-top:1px solid var(--grey200);font-size:13px";
-          row.innerHTML =
-            '<span style="color:var(--grey700);flex:none">' + c.name +
-            ' <span style="color:var(--grey400)">' + u + "명·" + pct.toFixed(1) + "%</span></span>" +
-            '<span style="color:var(--grey600);text-align:right">쓴사람 <b>' + won(avgUser) +
-            "원</b>(" + fmtCnt(cntUser) + "회) · 전체 <b>" + won(avgAll) +
-            "원</b>(" + fmtCnt(cntAll) + "회)</span>";
+          if (rangeMode) {
+            // 기간 모드: 롤업 기반 소모액·업글 횟수만(유저 분해 없음)
+            row.innerHTML =
+              '<span style="color:var(--grey700)">' + c.name + "</span>" +
+              '<span style="color:var(--grey600);text-align:right">소모 <b>' + won(spent) +
+              "원</b> · " + Math.round(cnt) + "회</span>";
+          } else {
+            const u = Number(o.users) || 0;
+            const pct = users ? (u / users) * 100 : 0;
+            const avgUser = u ? spent / u : 0; // 쓴 사람 평균 포인트
+            const avgAll = users ? spent / users : 0; // 전체 유저 평균 포인트
+            const cntUser = u ? cnt / u : 0; // 쓴 사람 평균 횟수
+            const cntAll = users ? cnt / users : 0; // 전체 유저 평균 횟수
+            row.innerHTML =
+              '<span style="color:var(--grey700);flex:none">' + c.name +
+              ' <span style="color:var(--grey400)">' + u + "명·" + pct.toFixed(1) + "%</span></span>" +
+              '<span style="color:var(--grey600);text-align:right">쓴사람 <b>' + won(avgUser) +
+              "원</b>(" + fmtCnt(cntUser) + "회) · 전체 <b>" + won(avgAll) +
+              "원</b>(" + fmtCnt(cntAll) + "회)</span>";
+          }
           el.appendChild(row);
         }
       }
@@ -889,7 +897,7 @@
           $("rcPerUser").textContent = won(users ? cons / users : 0) + "원";
           $("rcVsWithdraw").textContent =
             (wd ? (cons / wd) * 100 : 0).toFixed(2) + "%";
-          recoupTypes(d.recoupByType || {}, users);
+          recoupTypes(d.recoupByType || {}, users, rangeMode);
           renderTrend(d.nruDaily, d.dauDaily, d.opensDaily);
           // 보석 계산기: 서버 실제 등급값 반영(확률 = weight/합계×100)
           if (Array.isArray(d.gemGrades) && d.gemGrades.length) {
