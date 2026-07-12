@@ -145,7 +145,7 @@
           <div><label>목표 EV / 상자(원)</label><input id="ljTarget" type="number" value="0.6" step="0.1" /></div>
           <div><label>하루 오픈수(체감용)</label><input id="ljOpens" type="number" value="50" /></div>
         </div>
-        <div class="note" style="margin: 6px 0 8px">각 글자 드랍 확률(%)을 조절해요. 합이 100 미만이면 나머지는 <b>꽝</b>(글자 안 나옴)이라 완성이 더 느려져요. 한 글자를 <b>희귀(잭팟 조각)</b>로 두면 EV가 뚝 떨어져요.</div>
+        <div class="note" style="margin: 6px 0 8px">각 글자·꽝의 <b>비중</b>만 넣으면 확률은 자동 계산돼요(합 100 맞출 필요 없음). <b>꽝</b>(글자 없음) 비중을 올리면 완성이 느려지고, 한 글자를 <b>희귀(잭팟 조각)</b>로 두면 EV가 뚝 떨어져요.</div>
         <div id="ljLetters"></div>
         <div id="ljResult" style="margin-top: 12px; font-size: 14px; color: var(--grey800)"></div>
         <div class="note" style="margin-top: 8px">EV/상자 = (잭팟 상금 + 부분보상) ÷ 평균 완성 상자수. 완성 상자수는 불균등 확률 쿠폰 컬렉터(포함–배제)로 계산해요. 실제 지급은 이탈로 이보다 더 낮아요(상한).</div>
@@ -1236,23 +1236,31 @@
         const letters = ljLetters();
         const n = letters.length;
         const el = $("ljLetters");
-        el.innerHTML = letters
-          .map((c, i) => {
-            const isRare = i === n - 1 && n > 1;
-            const def = n <= 1 ? 100 : isRare ? 1 : Math.round((99 / (n - 1)) * 100) / 100;
-            return (
-              '<div class="barrow" style="gap:8px;align-items:center;padding:4px 0">' +
-              '<span style="width:auto;flex:none;min-width:30px;font-size:16px;font-weight:700">' +
-              c + (isRare ? " 💎" : "") + "</span>" +
-              '<input class="ljp" data-i="' + i + '" type="number" min="0" max="100" step="0.01" value="' +
-              def + '" style="width:88px;text-align:right;margin:0;padding:6px 8px" />' +
-              '<span style="font-size:12px;color:var(--grey400)">%</span>' +
-              '<span class="ljpct" style="flex:1;text-align:right;font-size:12px;color:var(--grey500)"></span>' +
-              "</div>"
-            );
-          })
-          .join("");
-        el.querySelectorAll(".ljp").forEach((x) => x.addEventListener("input", calcLj));
+        const rows = letters.map((c, i) => {
+          const isRare = i === n - 1 && n > 1;
+          const def = n <= 1 ? 20 : isRare ? 1 : 20;
+          return (
+            '<div class="barrow" style="gap:8px;align-items:center;padding:4px 0">' +
+            '<span style="width:auto;flex:none;min-width:30px;font-size:16px;font-weight:700">' +
+            c + (isRare ? " 💎" : "") + "</span>" +
+            '<span style="font-size:12px;color:var(--grey400)">비중</span>' +
+            '<input class="ljw" data-i="' + i + '" type="number" min="0" step="1" value="' +
+            def + '" style="width:74px;text-align:right;margin:0;padding:6px 8px" />' +
+            '<span class="ljpct" style="flex:1;text-align:right;font-size:12px;color:var(--grey500)"></span>' +
+            "</div>"
+          );
+        });
+        // 꽝(글자 없음) 비중 행
+        rows.push(
+          '<div class="barrow" style="gap:8px;align-items:center;padding:4px 0;border-top:1px dashed var(--grey200);margin-top:4px">' +
+          '<span style="width:auto;flex:none;min-width:30px;font-size:14px;font-weight:700;color:var(--grey400)">꽝</span>' +
+          '<span style="font-size:12px;color:var(--grey400)">비중</span>' +
+          '<input class="ljw" data-i="blank" type="number" min="0" step="1" value="0" style="width:74px;text-align:right;margin:0;padding:6px 8px" />' +
+          '<span class="ljpct" style="flex:1;text-align:right;font-size:12px;color:var(--grey500)"></span>' +
+          "</div>"
+        );
+        el.innerHTML = rows.join("");
+        el.querySelectorAll(".ljw").forEach((x) => x.addEventListener("input", calcLj));
         calcLj();
       }
       // 불균등 확률 쿠폰 컬렉터: 모든 글자 수집까지 평균 뽑기 수(포함–배제)
@@ -1268,27 +1276,37 @@
         return et;
       }
       function calcLj() {
-        const inputs = Array.from($("ljLetters").querySelectorAll(".ljp"));
-        const pctArr = inputs.map((x) => Math.max(0, Number(x.value) || 0));
-        const sum = pctArr.reduce((s, v) => s + v, 0);
-        const blank = Math.max(0, 100 - sum);
-        const probs = pctArr.map((p) => p / 100);
+        const rows = Array.from($("ljLetters").querySelectorAll(".ljw"));
+        const wAll = rows.map((x) => Math.max(0, Number(x.value) || 0));
+        const total = wAll.reduce((s, v) => s + v, 0);
+        // 마지막 행은 꽝(data-i="blank"), 그 앞이 글자들
+        const letterW = wAll.slice(0, -1);
+        const blankW = wAll[wAll.length - 1] || 0;
+        const probs = letterW.map((w) => (total > 0 ? w / total : 0));
+        const blankPct = total > 0 ? (blankW / total) * 100 : 0;
         const prize = Number($("ljPrize").value) || 0;
         const partial = Number($("ljPartial").value) || 0;
         const target = Number($("ljTarget").value) || 0;
         const opens = Number($("ljOpens").value) || 0;
         const et = ljExpectedDraws(probs);
-        const ev = isFinite(et) && et > 0 ? (prize + partial) / et : sum === 0 ? 0 : Infinity;
-        inputs.forEach((x, i) => {
+        const ev = isFinite(et) && et > 0 ? (prize + partial) / et : total === 0 ? 0 : Infinity;
+        // 각 행 옆에 확률% 표기
+        rows.forEach((x, i) => {
           const cell = x.parentElement.querySelector(".ljpct");
-          cell.textContent = probs[i] > 0 ? "약 " + Math.round(1 / probs[i]).toLocaleString() + "상자당 1개" : "안 나옴";
+          const p = total > 0 ? wAll[i] / total : 0;
+          if (x.dataset.i === "blank") {
+            cell.textContent = "= " + (p * 100).toFixed(2) + "%";
+          } else {
+            cell.textContent =
+              "= " + (p * 100).toFixed(2) + "%" +
+              (p > 0 ? " · 약 " + Math.round(1 / p).toLocaleString() + "상자당 1개" : " · 안 나옴");
+          }
         });
         const days = opens > 0 && isFinite(et) ? et / opens : 0;
         const okEv = isFinite(ev) && ev <= target + 1e-9;
         $("ljResult").innerHTML =
-          (sum > 100 ? '<div style="color:var(--red);margin-bottom:4px">⚠ 확률 합 ' + sum.toFixed(2) + "% &gt; 100%</div>" : "") +
           "완성까지 평균 <b>" + (isFinite(et) ? Math.round(et).toLocaleString() : "∞") + "상자</b>" +
-          (blank > 0 ? ' <span style="color:var(--grey400)">(꽝 ' + blank.toFixed(1) + "%)</span>" : "") +
+          (blankPct > 0 ? ' <span style="color:var(--grey400)">(꽝 ' + blankPct.toFixed(1) + "%)</span>" : "") +
           " · <b>" + (days ? days.toFixed(1) : "∞") + "일</b>(하루 " + opens + "오픈)" +
           '<br>상자당 EV <b style="color:' + (okEv ? "var(--green)" : "var(--red)") + '">' +
           (isFinite(ev) ? ev.toFixed(3) : "∞") + "원</b> (목표 " + target.toFixed(2) +
