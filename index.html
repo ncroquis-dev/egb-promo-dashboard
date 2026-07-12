@@ -270,6 +270,18 @@
           <button id="adwSave" style="margin-top: 10px">비중 저장</button>
           <div id="adwMsg" style="font-size: 12px; margin-top: 6px"></div>
         </div>
+
+        <!-- 매크로(봇) 의심 유저 -->
+        <div class="card">
+          <h2>🤖 봇 의심 유저 <span style="font-size: 12px; color: var(--grey400); font-weight: 400">활동 시각대 수·오픈수·심야 활동 기준</span></h2>
+          <div class="note" style="margin: 0 0 10px">
+            하루 <b>활동 시각대 수</b>(24시간 중 몇 개 시각대에 열었나)가 크면(20+) 잠 안 자고 돌린 것 → 봇 의심.
+            기간은 위 조회 기간을 따르고 미설정 시 최근 7일이에요.
+            <b>active_hours 로깅이 프로덕션 open_chest에 반영된 뒤(출시 후)부터</b> 데이터가 쌓여요.
+          </div>
+          <div style="overflow-x: auto"><table id="botTbl" style="width: 100%; border-collapse: collapse; font-size: 13px"></table></div>
+          <div id="botMsg" style="font-size: 12px; color: var(--grey600); margin-top: 8px"></div>
+        </div>
       </div>
 
       <!-- 보석 가치 계산기 (등장확률 → 상자 1회당 EV) -->
@@ -816,6 +828,58 @@
         return data;
       }
 
+      // 봇 의심: 활동 시각대(24비트) 히트맵. 켜진 시각대 색칠, 심야(2~5시)는 빨강.
+      function botHeatmap(mask) {
+        let cells = "";
+        for (let h = 0; h < 24; h++) {
+          const on = (mask >> h) & 1;
+          const night = h >= 2 && h <= 5;
+          const bg = on ? (night ? "var(--red)" : "var(--blue)") : "var(--grey200)";
+          cells +=
+            '<span title="' + h + '시" style="display:inline-block;width:7px;height:12px;margin:0 0.5px;border-radius:2px;background:' +
+            bg + '"></span>';
+        }
+        return '<span style="white-space:nowrap">' + cells + "</span>";
+      }
+      function renderBots(rows) {
+        if (!rows.length) {
+          $("botTbl").innerHTML = "";
+          $("botMsg").textContent = "의심 후보 없음(또는 데이터 미수집).";
+          return;
+        }
+        const body = rows
+          .map((r) => {
+            const mh = Number(r.max_hours) || 0;
+            const mhColor = mh >= 20 ? "var(--red)" : mh >= 16 ? "#c47f17" : "var(--grey800)";
+            return (
+              "<tr style='border-top:1px solid var(--grey200)'>" +
+              "<td style='padding:5px 6px;font-family:monospace;font-size:11px'>" +
+              (r.user_key || "").slice(0, 12) + "…</td>" +
+              "<td style='padding:5px 6px;text-align:right'>" + Number(r.opens).toLocaleString() + "</td>" +
+              "<td style='padding:5px 6px;text-align:right'>" + r.days + "</td>" +
+              "<td style='padding:5px 6px;text-align:right;font-weight:700;color:" + mhColor + "'>" + mh + "</td>" +
+              "<td style='padding:5px 6px;text-align:right;color:var(--grey500)'>" + r.avg_hours + "</td>" +
+              "<td style='padding:5px 6px;text-align:right'>" +
+              (Number(r.night_days) > 0 ? '<span style="color:var(--red)">' + r.night_days + "</span>" : "0") + "</td>" +
+              "<td style='padding:5px 6px'>" + botHeatmap(Number(r.hours_union) || 0) + "</td>" +
+              "</tr>"
+            );
+          })
+          .join("");
+        $("botTbl").innerHTML =
+          "<thead><tr style='color:var(--grey500);font-size:12px'>" +
+          "<th style='padding:4px 6px;text-align:left'>유저</th>" +
+          "<th style='padding:4px 6px;text-align:right'>오픈</th>" +
+          "<th style='padding:4px 6px;text-align:right'>활동일</th>" +
+          "<th style='padding:4px 6px;text-align:right'>최대시각대/일</th>" +
+          "<th style='padding:4px 6px;text-align:right'>평균</th>" +
+          "<th style='padding:4px 6px;text-align:right'>심야일</th>" +
+          "<th style='padding:4px 6px;text-align:left'>활동 시각대(0→23시)</th>" +
+          "</tr></thead><tbody>" + body + "</tbody>";
+        $("botMsg").innerHTML =
+          "총 " + rows.length + "명 후보 · <span style='color:var(--red)'>■</span> 심야(2~5시) · 최대 시각대/일 20+ 는 봇 가능성 높음";
+      }
+
       async function load() {
         const url = $("url").value.trim().replace(/\/$/, "");
         const anon = $("anon").value.trim();
@@ -1019,6 +1083,19 @@
             $("adwMsg").innerHTML =
               '<span style="color:var(--red)">비중 불러오기 실패: ' +
               (e && e.message ? e.message : e) + " (서버에 ad_group_weights 미배포일 수 있어요)</span>";
+          }
+
+          // 봇 의심 유저 로드(기간 있으면 그 기간, 없으면 최근 7일 — 서버 기본값)
+          try {
+            const b = await callAction(url, anon, admin,
+              useRange
+                ? { action: "bot_suspects", from: rFrom, to: rTo }
+                : { action: "bot_suspects" });
+            renderBots(Array.isArray(b) ? b : []);
+          } catch (e) {
+            $("botMsg").innerHTML =
+              '<span style="color:var(--grey500)">봇 데이터 없음/미배포: ' +
+              (e && e.message ? e.message : e) + " (출시 후 active_hours가 쌓이면 표시돼요)</span>";
           }
         } catch (e) {
           $("err").textContent = "불러오기 실패: " + (e && e.message ? e.message : e);
