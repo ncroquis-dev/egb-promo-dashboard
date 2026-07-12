@@ -139,16 +139,17 @@
         <div class="row">
           <div><label>문구 (모으는 글자)</label><input id="ljPhrase" value="부자되세요" /></div>
           <div><label>완성 잭팟 상금(원)</label><input id="ljPrize" type="number" value="5000" /></div>
+          <div><label>보석 평균가치(원)</label><input id="ljGemEv" type="number" value="1.75" step="0.05" /></div>
         </div>
         <div class="row">
           <div><label>부분보상 합계 / 완성당(원)</label><input id="ljPartial" type="number" value="0" /></div>
           <div><label>목표 EV / 상자(원)</label><input id="ljTarget" type="number" value="0.6" step="0.1" /></div>
           <div><label>하루 오픈수(체감용)</label><input id="ljOpens" type="number" value="50" /></div>
         </div>
-        <div class="note" style="margin: 6px 0 8px">각 글자·꽝의 <b>비중</b>만 넣으면 확률은 자동 계산돼요(합 100 맞출 필요 없음). <b>꽝</b>(글자 없음) 비중을 올리면 완성이 느려지고, 한 글자를 <b>희귀(잭팟 조각)</b>로 두면 EV가 뚝 떨어져요.</div>
+        <div class="note" style="margin: 6px 0 8px">각 글자·<b>보석</b>의 <b>비중</b>만 넣으면 확률은 자동 계산돼요(합 100 맞출 필요 없음). 상자를 열면 <b>보석</b>이 나오거나 <b>글자</b>가 나와요. 보석 비중을 올리면 글자가 덜 나와 완성이 느려지고, 한 글자를 <b>희귀(잭팟 조각)</b>로 두면 EV가 뚝 떨어져요.</div>
         <div id="ljLetters"></div>
         <div id="ljResult" style="margin-top: 12px; font-size: 14px; color: var(--grey800)"></div>
-        <div class="note" style="margin-top: 8px">EV/상자 = (잭팟 상금 + 부분보상) ÷ 평균 완성 상자수. 완성 상자수는 불균등 확률 쿠폰 컬렉터(포함–배제)로 계산해요. 실제 지급은 이탈로 이보다 더 낮아요(상한).</div>
+        <div class="note" style="margin-top: 8px">EV/상자 = 보석확률×보석가치 + (잭팟 상금 + 부분보상) ÷ 평균 완성 상자수. 완성 상자수는 불균등 확률 쿠폰 컬렉터(포함–배제)로 계산해요. 실제 잭팟 지급은 이탈로 이보다 더 낮아요(상한).</div>
       </div>
 
       <div id="result" style="display: none">
@@ -1250,12 +1251,12 @@
             "</div>"
           );
         });
-        // 꽝(글자 없음) 비중 행
+        // 보석(글자 대신 보석이 나옴) 비중 행 — 기본 비중을 크게(보석이 주로 나옴)
         rows.push(
           '<div class="barrow" style="gap:8px;align-items:center;padding:4px 0;border-top:1px dashed var(--grey200);margin-top:4px">' +
-          '<span style="width:auto;flex:none;min-width:30px;font-size:14px;font-weight:700;color:var(--grey400)">꽝</span>' +
+          '<span style="width:auto;flex:none;min-width:30px;font-size:15px;font-weight:700;color:var(--blue)">보석</span>' +
           '<span style="font-size:12px;color:var(--grey400)">비중</span>' +
-          '<input class="ljw" data-i="blank" type="number" min="0" step="1" value="0" style="width:74px;text-align:right;margin:0;padding:6px 8px" />' +
+          '<input class="ljw" data-i="gem" type="number" min="0" step="1" value="100" style="width:74px;text-align:right;margin:0;padding:6px 8px" />' +
           '<span class="ljpct" style="flex:1;text-align:right;font-size:12px;color:var(--grey500)"></span>' +
           "</div>"
         );
@@ -1279,23 +1280,27 @@
         const rows = Array.from($("ljLetters").querySelectorAll(".ljw"));
         const wAll = rows.map((x) => Math.max(0, Number(x.value) || 0));
         const total = wAll.reduce((s, v) => s + v, 0);
-        // 마지막 행은 꽝(data-i="blank"), 그 앞이 글자들
+        // 마지막 행은 보석(data-i="gem"), 그 앞이 글자들
         const letterW = wAll.slice(0, -1);
-        const blankW = wAll[wAll.length - 1] || 0;
+        const gemW = wAll[wAll.length - 1] || 0;
         const probs = letterW.map((w) => (total > 0 ? w / total : 0));
-        const blankPct = total > 0 ? (blankW / total) * 100 : 0;
+        const pGem = total > 0 ? gemW / total : 0;
         const prize = Number($("ljPrize").value) || 0;
         const partial = Number($("ljPartial").value) || 0;
         const target = Number($("ljTarget").value) || 0;
         const opens = Number($("ljOpens").value) || 0;
+        const gemEv = Number($("ljGemEv").value) || 0;
+        // 글자 스트림 기여: 완성까지 평균 상자수(보석확률만큼 희석됨)로 잭팟 분배
         const et = ljExpectedDraws(probs);
-        const ev = isFinite(et) && et > 0 ? (prize + partial) / et : total === 0 ? 0 : Infinity;
+        const jackpotPerBox = isFinite(et) && et > 0 ? (prize + partial) / et : 0;
+        const gemPerBox = pGem * gemEv;
+        const ev = gemPerBox + jackpotPerBox;
         // 각 행 옆에 확률% 표기
         rows.forEach((x, i) => {
           const cell = x.parentElement.querySelector(".ljpct");
           const p = total > 0 ? wAll[i] / total : 0;
-          if (x.dataset.i === "blank") {
-            cell.textContent = "= " + (p * 100).toFixed(2) + "%";
+          if (x.dataset.i === "gem") {
+            cell.textContent = "= " + (p * 100).toFixed(2) + "% · " + won(Math.round(gemPerBox * 1000) / 1000) + "원/상자";
           } else {
             cell.textContent =
               "= " + (p * 100).toFixed(2) + "%" +
@@ -1303,18 +1308,19 @@
           }
         });
         const days = opens > 0 && isFinite(et) ? et / opens : 0;
-        const okEv = isFinite(ev) && ev <= target + 1e-9;
+        const okEv = ev <= target + 1e-9;
         $("ljResult").innerHTML =
           "완성까지 평균 <b>" + (isFinite(et) ? Math.round(et).toLocaleString() : "∞") + "상자</b>" +
-          (blankPct > 0 ? ' <span style="color:var(--grey400)">(꽝 ' + blankPct.toFixed(1) + "%)</span>" : "") +
+          ' <span style="color:var(--grey400)">(보석 ' + (pGem * 100).toFixed(1) + "%)</span>" +
           " · <b>" + (days ? days.toFixed(1) : "∞") + "일</b>(하루 " + opens + "오픈)" +
           '<br>상자당 EV <b style="color:' + (okEv ? "var(--green)" : "var(--red)") + '">' +
-          (isFinite(ev) ? ev.toFixed(3) : "∞") + "원</b> (목표 " + target.toFixed(2) +
-          " · 보석 1.75 대비 " + (isFinite(ev) ? Math.round((ev / 1.75) * 100) : "∞") + "%)" +
-          '<br><span style="color:var(--grey500);font-size:12px">잭팟 ' + won(prize) +
-          "원 + 부분보상 " + won(partial) + "원 = 완성당 " + won(prize + partial) + "원</span>";
+          ev.toFixed(3) + "원</b> (목표 " + target.toFixed(2) +
+          " · 보석 " + gemEv.toFixed(2) + " 대비 " + (gemEv > 0 ? Math.round((ev / gemEv) * 100) : "∞") + "%)" +
+          '<br><span style="color:var(--grey500);font-size:12px">보석 ' + won(Math.round(gemPerBox * 1000) / 1000) +
+          "원/상자 + 잭팟 " + won(Math.round(jackpotPerBox * 1000) / 1000) + "원/상자" +
+          " · 완성당 " + won(prize + partial) + "원</span>";
       }
-      ["ljPhrase", "ljPrize", "ljPartial", "ljTarget", "ljOpens"].forEach((id) =>
+      ["ljPhrase", "ljPrize", "ljGemEv", "ljPartial", "ljTarget", "ljOpens"].forEach((id) =>
         $(id).addEventListener("input", () => (id === "ljPhrase" ? buildLj() : calcLj())),
       );
       buildLj();
