@@ -133,35 +133,26 @@
         <div class="note" style="margin-top: 6px">출금=오픈수×평균가치×일수−업글소모(선지출) · 오픈광고=오픈수×일수(오픈당 1회) · 출금광고=출금액÷(평균가치×가방칸) · 보석추가광고=⌈(오픈수−하루상한)÷5⌉×일수 · 광고수익=(오픈+출금+보석추가광고)×eCPM÷1000 · 순손익=광고수익−출금. 출금률 100%·열쇠 충분 가정.</div>
       </div>
 
-      <!-- 희귀 보석 조각 시뮬레이터 (보석 대신 나오는 조각, 서버 불필요) -->
+      <!-- 희귀 보석 조각 시뮬레이터 (유저 고지 확률 기준) -->
       <div class="card">
-        <h2>💎 희귀 보석 조각 시뮬레이터 <span style="font-size: 12px; color: var(--grey400); font-weight: 400">보석 대신 나오는 조각 · 상자당 EV 설계</span></h2>
+        <h2>💎 보석 등급 · 조각 확률 설계 <span style="font-size: 12px; color: var(--grey400); font-weight: 400">유저 고지 확률(합 100%) · EV·완성·업글 정합</span></h2>
         <div class="row">
           <div><label>조각 수 (모아야 완성)</label><input id="ljCount" type="number" min="2" max="8" value="5" /></div>
           <div><label>완성 = 희귀 보석 가치(원)</label><input id="ljPrize" type="number" value="50" /></div>
-          <div><label>일반 보석 평균가치(원)</label><input id="ljGemEv" type="number" value="1.75" step="0.05" /></div>
-        </div>
-        <div class="row">
-          <div><label>보석 대비 목표(참고·원)</label><input id="ljTarget" type="number" value="1.75" step="0.05" /></div>
           <div><label>하루 오픈수(체감용)</label><input id="ljOpens" type="number" value="50" /></div>
           <div><label>유저풀 하루 총오픈(당첨빈도)</label><input id="ljPool" type="number" value="3000" /></div>
         </div>
-        <div class="note" style="margin: 6px 0 8px">각 조각·<b>일반 보석</b>의 <b>비중</b>만 넣으면 확률 자동 계산(합 100 불필요). 상자를 열면 <b>일반 보석</b>이 나오거나 <b>조각</b>이 나와요. 조각 N개를 다 모으면 <b>희귀 보석</b> 완성. 조각 하나를 <b>핵심(희귀)</b>으로 두면 완성이 게이트돼서 EV·완성속도를 조절해요.</div>
+        <div class="note" style="margin: 8px 0 6px"><b>유저에게 고지되는 등장확률(%)</b>을 직접 넣어요(합이 정확히 100%여야 함). 다이아·백금은 업글로 +0.01%p 올라가니 <b>2자리로 딱 떨어지게</b> 두세요. 조각(전체)에 배정한 %는 아래에서 조각별 비중으로 분배돼요.</div>
+        <div style="overflow-x: auto"><table id="ljGradeTbl" style="width:100%;border-collapse:collapse;font-size:13px"></table></div>
+        <div class="note" style="margin: 12px 0 4px"><b>희귀 보석 조각</b>(위 조각 전체 % 안에서 비중 분배). 마지막 <b>핵심 조각</b>이 게이트예요.</div>
         <div id="ljLetters"></div>
-        <div id="ljResult" style="margin-top: 12px; font-size: 14px; color: var(--grey800)"></div>
-        <div class="note" style="margin-top: 8px">EV/상자 = 보석확률×보석가치 + 완성 보석가치 ÷ 평균 완성 상자수. 완성 상자수는 불균등 확률 쿠폰 컬렉터(포함–배제)로 계산해요. 실제 완성 지급은 이탈로 이보다 더 낮아요(상한).</div>
-      </div>
-
-      <!-- 보석 등급 확률 · 업그레이드 정합 검토 -->
-      <div class="card">
-        <h2>🧮 보석 등급 확률 · 업그레이드 정합 <span style="font-size: 12px; color: var(--grey400); font-weight: 400">조각 도입 시 등급/업글 2자리 정합 확인</span></h2>
-        <div class="note" style="margin: 2px 0 8px">위 시뮬의 조각 비중 기준, 상자에서 <b>일반 보석이 나올 확률</b> = <b id="ljGemShare">–</b>. 아래는 <b>보석이 나왔을 때</b>의 등급 분포와 업그레이드(+0.01%p) 정합이에요. 등급 비중을 바꿔 조정할 수 있어요.</div>
-        <div class="row">
+        <div class="row" style="margin-top: 8px">
           <div><label>다이아 업글 레벨 (보석최대치−20, 0~30)</label><input id="ljDiaLv" type="number" min="0" max="30" value="30" /></div>
           <div><label>백금 업글 레벨 (열쇠최대치−10, 0~70)</label><input id="ljPlatLv" type="number" min="0" max="70" value="70" /></div>
         </div>
-        <div style="overflow-x: auto"><table id="ljGradeTbl" style="width:100%;border-collapse:collapse;font-size:13px"></table></div>
+        <div id="ljResult" style="margin-top: 12px; font-size: 14px; color: var(--grey800)"></div>
         <div id="ljGradeNote" style="margin-top: 10px; font-size: 13px"></div>
+        <div class="note" style="margin-top: 8px">EV/상자 = Σ(등급확률×가치) + 완성 보석가치 ÷ 평균 완성 상자수. 완성 상자수는 불균등 확률 쿠폰 컬렉터(포함–배제). 내부는 2단 추첨(보석/조각→등급)이지만 고지는 이 합산 확률로 해요. 실제 완성 지급은 이탈로 이보다 낮아요(상한).</div>
       </div>
 
       <div id="result" style="display: none">
@@ -1238,15 +1229,85 @@
         applyGemValues(serverGems || GEM_EV),
       );
 
-      // ── 희귀 보석 조각 시뮬레이터 ──────────────────────────
-      // 조각 비중 기본값: 공통 조각 12, 핵심(희귀) 조각 1, 일반 보석 800
-      const LJ_COMMON = 12, LJ_RARE = 1, LJ_GEM = 800;
-      function buildLj() {
+      // ── 보석 등급 · 조각 확률 설계 (유저 고지 확률 기준) ───────
+      // 고지 확률(%) = 전체 상자 기준. 등급들 + 조각(전체)이 합 100%.
+      // 조각(전체) % 안에서 조각별 비중으로 분배. 다이아·백금은 업글로 +0.01%p씩.
+      const LJ_GRADES = [
+        { key: "bronze", g: "동화", pct: 45, v: 1, absorb: true },
+        { key: "silver", g: "은", pct: 36, v: 2 },
+        { key: "gold", g: "금", pct: 10, v: 3 },
+        { key: "platinum", g: "백금", pct: 2, v: 5, up: "plat" },
+        { key: "diamond", g: "다이아", pct: 1, v: 10, up: "dia" },
+      ];
+      const LJ_FRAG_PCT = 6; // 조각 전체 등장확률(%)
+      const LJ_COMMON = 12, LJ_RARE = 1; // 조각 비중(조각 % 안에서 분배)
+
+      // 불균등 확률 쿠폰 컬렉터: 모든 조각 수집까지 평균 뽑기 수(포함–배제)
+      function ljExpectedDraws(probs) {
+        const n = probs.length;
+        if (n === 0 || probs.some((p) => p <= 0)) return Infinity;
+        let et = 0;
+        for (let mask = 1; mask < (1 << n); mask++) {
+          let ps = 0, bits = 0;
+          for (let i = 0; i < n; i++) if (mask & (1 << i)) { ps += probs[i]; bits++; }
+          if (ps > 0) et += (bits & 1 ? 1 : -1) / ps;
+        }
+        return et;
+      }
+      const clean2 = (x) => Math.abs(x - Math.round(x * 100) / 100) < 1e-9;
+      const cleanCell = (x) =>
+        clean2(x)
+          ? '<span style="color:var(--green)">✓</span>'
+          : '<span style="color:var(--red)">✗</span>';
+
+      // 등급 확률 테이블(편집 가능한 입력 + 파생 셀) — 1회 생성
+      function buildGradeTbl() {
+        const gr = LJ_GRADES.map((x, i) =>
+          "<tr style='border-top:1px solid var(--grey200)'>" +
+          "<td style='padding:4px 6px;font-weight:600" + (x.up ? ";color:var(--blue)" : "") + "'>" + x.g +
+          (x.up === "dia" ? " ▲" : x.up === "plat" ? " ▲" : "") + "</td>" +
+          "<td style='padding:4px 6px;text-align:right'><input class='ljg' data-i='" + i +
+          "' type='number' min='0' step='0.01' value='" + x.pct + "' style='width:78px;text-align:right;margin:0;padding:5px 7px' /></td>" +
+          "<td style='padding:4px 6px;text-align:right'><input class='ljgv' data-i='" + i +
+          "' type='number' min='0' step='0.5' value='" + x.v + "' style='width:60px;text-align:right;margin:0;padding:5px 7px' /></td>" +
+          "<td class='ljg-max' style='padding:4px 6px;text-align:right'></td>" +
+          "<td class='ljg-clean' style='padding:4px 6px;text-align:center'></td>" +
+          "</tr>"
+        ).join("");
+        const fragRow =
+          "<tr style='border-top:1px solid var(--grey200);background:var(--grey50,#f7f8fa)'>" +
+          "<td style='padding:4px 6px;font-weight:600;color:var(--red)'>희귀 보석 조각(전체)</td>" +
+          "<td style='padding:4px 6px;text-align:right'><input id='ljFragPct' type='number' min='0' step='0.01' value='" +
+          LJ_FRAG_PCT + "' style='width:78px;text-align:right;margin:0;padding:5px 7px' /></td>" +
+          "<td style='padding:4px 6px;text-align:right;color:var(--grey400)'>완성시</td>" +
+          "<td class='ljg-max' style='padding:4px 6px;text-align:right'></td>" +
+          "<td class='ljg-clean' style='padding:4px 6px;text-align:center'></td>" +
+          "</tr>";
+        const sumRow =
+          "<tr style='border-top:2px solid var(--grey300);font-weight:700'>" +
+          "<td style='padding:6px'>합계</td>" +
+          "<td id='ljSum' style='padding:6px;text-align:right'></td><td></td>" +
+          "<td id='ljSumMax' style='padding:6px;text-align:right'></td>" +
+          "<td id='ljSumClean' style='padding:6px;text-align:center'></td></tr>";
+        $("ljGradeTbl").innerHTML =
+          "<thead><tr style='color:var(--grey500);font-size:12px'>" +
+          "<th style='padding:4px 6px;text-align:left'>등급/항목</th>" +
+          "<th style='padding:4px 6px;text-align:right'>고지 확률%</th>" +
+          "<th style='padding:4px 6px;text-align:right'>가치(원)</th>" +
+          "<th style='padding:4px 6px;text-align:right'>업글 최대적용%</th>" +
+          "<th style='padding:4px 6px;text-align:center'>2자리</th>" +
+          "</tr></thead><tbody>" + gr + fragRow + sumRow + "</tbody>";
+        $("ljGradeTbl").querySelectorAll(".ljg,.ljgv,#ljFragPct").forEach((x) =>
+          x.addEventListener("input", calcLj),
+        );
+      }
+
+      // 조각 세부(비중) 행 — 조각 수 변경 시 재생성
+      function buildFrags() {
         const n = Math.max(2, Math.min(8, Number($("ljCount").value) || 5));
-        const el = $("ljLetters");
         const rows = [];
         for (let i = 0; i < n; i++) {
-          const isRare = i === n - 1; // 마지막 조각을 핵심(희귀)로
+          const isRare = i === n - 1;
           const label = isRare ? "핵심 조각 💎" : "조각 " + (i + 1);
           const def = isRare ? LJ_RARE : LJ_COMMON;
           rows.push(
@@ -1260,159 +1321,100 @@
             "</div>"
           );
         }
-        // 일반 보석 비중 행(주로 나옴)
-        rows.push(
-          '<div class="barrow" style="gap:8px;align-items:center;padding:4px 0;border-top:1px dashed var(--grey200);margin-top:4px">' +
-          '<span style="width:auto;flex:none;min-width:64px;font-size:14px;font-weight:700;color:var(--blue)">일반 보석</span>' +
-          '<span style="font-size:12px;color:var(--grey400)">비중</span>' +
-          '<input class="ljw" data-i="gem" type="number" min="0" step="1" value="' + LJ_GEM +
-          '" style="width:74px;text-align:right;margin:0;padding:6px 8px" />' +
-          '<span class="ljpct" style="flex:1;text-align:right;font-size:12px;color:var(--grey500)"></span>' +
-          "</div>"
-        );
-        el.innerHTML = rows.join("");
-        el.querySelectorAll(".ljw").forEach((x) => x.addEventListener("input", calcLj));
-        calcLj();
+        $("ljLetters").innerHTML = rows.join("");
+        $("ljLetters").querySelectorAll(".ljw").forEach((x) => x.addEventListener("input", calcLj));
       }
-      // 불균등 확률 쿠폰 컬렉터: 모든 조각 수집까지 평균 뽑기 수(포함–배제)
-      function ljExpectedDraws(probs) {
-        const n = probs.length;
-        if (n === 0 || probs.some((p) => p <= 0)) return Infinity;
-        let et = 0;
-        for (let mask = 1; mask < (1 << n); mask++) {
-          let ps = 0, bits = 0;
-          for (let i = 0; i < n; i++) if (mask & (1 << i)) { ps += probs[i]; bits++; }
-          if (ps > 0) et += (bits & 1 ? 1 : -1) / ps;
-        }
-        return et;
-      }
-      let ljPGem = 0.9423; // 등급 정합 섹션이 참조하는 '보석이 나올 확률'
+      function buildLj() { buildFrags(); calcLj(); }
+
       function calcLj() {
-        const rows = Array.from($("ljLetters").querySelectorAll(".ljw"));
-        const wAll = rows.map((x) => Math.max(0, Number(x.value) || 0));
-        const total = wAll.reduce((s, v) => s + v, 0);
-        const fragW = wAll.slice(0, -1);
-        const gemW = wAll[wAll.length - 1] || 0;
-        const probs = fragW.map((w) => (total > 0 ? w / total : 0));
-        const pGem = total > 0 ? gemW / total : 0;
-        ljPGem = pGem;
+        // 고지 확률(%) 읽기
+        const gPct = Array.from($("ljGradeTbl").querySelectorAll(".ljg")).map((x) => Number(x.value) || 0);
+        const gVal = Array.from($("ljGradeTbl").querySelectorAll(".ljgv")).map((x) => Number(x.value) || 0);
+        const fragPct = Number($("ljFragPct").value) || 0;
+        const sumBase = gPct.reduce((s, v) => s + v, 0) + fragPct;
+        // 업글 최대 적용
+        const diaLv = Math.max(0, Number($("ljDiaLv").value) || 0);
+        const platLv = Math.max(0, Number($("ljPlatLv").value) || 0);
+        const upOf = (i) => (LJ_GRADES[i].up === "dia" ? diaLv * 0.01 : LJ_GRADES[i].up === "plat" ? platLv * 0.01 : 0);
+        const absorbTotal = diaLv * 0.01 + platLv * 0.01; // 동화에서 차감
+        const gMax = gPct.map((p, i) => p + upOf(i) - (LJ_GRADES[i].absorb ? absorbTotal : 0));
+        const sumMax = gMax.reduce((s, v) => s + v, 0) + fragPct;
+        // 조각 세부 비중 → 전체상자 확률(분수)
+        const wRows = Array.from($("ljLetters").querySelectorAll(".ljw"));
+        const wArr = wRows.map((x) => Math.max(0, Number(x.value) || 0));
+        const wSum = wArr.reduce((s, v) => s + v, 0);
+        const fragProbs = wArr.map((w) => (wSum > 0 ? (fragPct / 100) * (w / wSum) : 0));
+        // 입력값
         const prize = Number($("ljPrize").value) || 0;
-        const target = Number($("ljTarget").value) || 0;
         const opens = Number($("ljOpens").value) || 0;
         const pool = Number($("ljPool").value) || 0;
-        const gemEv = Number($("ljGemEv").value) || 0;
-        const et = ljExpectedDraws(probs);
-        const winPerBox = isFinite(et) && et > 0 ? prize / et : 0; // 완성 보석 기여/상자
-        const gemPerBox = pGem * gemEv;
-        const ev = gemPerBox + winPerBox;
-        rows.forEach((x, i) => {
-          const cell = x.parentElement.querySelector(".ljpct");
-          const p = total > 0 ? wAll[i] / total : 0;
-          if (x.dataset.i === "gem") {
-            cell.textContent = "= " + (p * 100).toFixed(2) + "% · " + won(Math.round(gemPerBox * 1000) / 1000) + "원/상자";
-          } else {
-            cell.textContent =
-              "= " + (p * 100).toFixed(3) + "%" +
-              (p > 0 ? " · 약 " + Math.round(1 / p).toLocaleString() + "상자당 1개" : " · 안 나옴");
-          }
+        // EV
+        const gemEV = gPct.reduce((s, p, i) => s + (p / 100) * gVal[i], 0);
+        const gemEVmax = gMax.reduce((s, p, i) => s + (p / 100) * gVal[i], 0);
+        const et = ljExpectedDraws(fragProbs);
+        const winPerBox = isFinite(et) && et > 0 ? prize / et : 0;
+        const ev = gemEV + winPerBox;
+        const evMax = gemEVmax + winPerBox;
+        // 등급 테이블 파생 셀 갱신
+        const maxCells = $("ljGradeTbl").querySelectorAll(".ljg-max");
+        const cleanCells = $("ljGradeTbl").querySelectorAll(".ljg-clean");
+        LJ_GRADES.forEach((x, i) => {
+          maxCells[i].innerHTML =
+            gMax[i].toFixed(2) + "%" +
+            (upOf(i) > 0 ? " <span style='color:var(--blue);font-size:11px'>(+" + upOf(i).toFixed(2) + ")</span>" : "") +
+            (x.absorb ? " <span style='color:var(--grey400);font-size:11px'>(−" + absorbTotal.toFixed(2) + ")</span>" : "");
+          cleanCells[i].innerHTML = clean2(gPct[i]) && clean2(gMax[i]) ? cleanCell(0) : cleanCell(0.001);
         });
+        // 조각 행(6번째 max/clean)
+        maxCells[5].textContent = fragPct.toFixed(2) + "%";
+        cleanCells[5].innerHTML = clean2(fragPct) ? cleanCell(0) : cleanCell(0.001);
+        $("ljSum").innerHTML = sumBase.toFixed(2) + "% " + (Math.abs(sumBase - 100) < 1e-9 ? cleanCell(0) : '<span style="color:var(--red)">✗</span>');
+        $("ljSumMax").innerHTML = sumMax.toFixed(2) + "%";
+        $("ljSumClean").innerHTML = Math.abs(sumMax - 100) < 1e-9 ? cleanCell(0) : '<span style="color:var(--red)">✗</span>';
+        // 조각 세부 행 옆 확률(전체상자 기준)
+        wRows.forEach((x, i) => {
+          const p = fragProbs[i];
+          x.parentElement.querySelector(".ljpct").textContent =
+            "= " + (p * 100).toFixed(3) + "%" +
+            (p > 0 ? " · 약 " + Math.round(1 / p).toLocaleString() + "상자당 1개" : " · 안 나옴");
+        });
+        // 결과 요약
         const days = opens > 0 && isFinite(et) ? et / opens : 0;
-        const okEv = ev <= target + 1e-9;
-        // 유저풀 당첨 빈도
         let winTxt = "–";
         if (pool > 0 && isFinite(et) && et > 0) {
           const perDay = pool / et;
           winTxt = perDay >= 1 ? perDay.toFixed(1) + "명/일" : (perDay * 7).toFixed(1) + "명/주";
         }
-        const gemMult = gemEv > 0 ? (prize / gemEv).toFixed(0) : "–";
+        const avgGem = 1.75;
+        const gemMult = (prize / avgGem).toFixed(0);
+        const sumOk = Math.abs(sumBase - 100) < 1e-9;
         $("ljResult").innerHTML =
+          (sumOk ? "" : '<div style="color:var(--red);margin-bottom:4px">⚠ 고지 확률 합이 100%가 아니에요 (' + sumBase.toFixed(2) + "%)</div>") +
           "완성까지 평균 <b>" + (isFinite(et) ? Math.round(et).toLocaleString() : "∞") + "상자</b>" +
-          ' <span style="color:var(--grey400)">(보석 ' + (pGem * 100).toFixed(2) + "%)</span>" +
+          ' <span style="color:var(--grey400)">(조각 전체 ' + fragPct.toFixed(2) + "%)</span>" +
           " · <b>" + (days ? days.toFixed(0) : "∞") + "일</b>(하루 " + opens + "오픈)" +
           " · 유저풀 당첨 <b>" + winTxt + "</b>" +
-          '<br>상자당 EV <b style="color:' + (okEv ? "var(--green)" : "var(--red)") + '">' +
-          ev.toFixed(3) + "원</b> (보석 " + gemEv.toFixed(2) +
-          " 대비 " + (gemEv > 0 ? Math.round((ev / gemEv) * 100) : "∞") + "%)" +
-          '<br><span style="color:var(--grey500);font-size:12px">보석 ' + won(Math.round(gemPerBox * 1000) / 1000) +
+          '<br>상자당 EV <b style="color:' + (ev <= avgGem + 1e-9 ? "var(--green)" : "var(--red)") + '">' +
+          ev.toFixed(3) + "원</b>" +
+          " <span style='color:var(--grey500)'>(업글 최대 시 " + evMax.toFixed(3) + "원)</span>" +
+          " · 기존 보석 1.75 대비 " + Math.round((ev / avgGem) * 100) + "%" +
+          '<br><span style="color:var(--grey500);font-size:12px">보석 등급 ' + gemEV.toFixed(3) +
           "원/상자 + 완성 " + won(Math.round(winPerBox * 1000) / 1000) + "원/상자" +
-          " · 완성=희귀 보석 " + won(prize) + "원(평소 보석의 " + gemMult + "배)</span>";
-        renderGrades();
-      }
-
-      // ── 보석 등급 확률 · 업그레이드 정합 검토 ────────────────
-      // 현재 서버 등급(합 weight=100 → weight=%). 편집 가능.
-      const LJ_GRADES = [
-        { g: "동화", w: 49, v: 1 },
-        { g: "은", w: 38, v: 2 },
-        { g: "금", w: 10, v: 3 },
-        { g: "백금", w: 2, v: 5, up: "plat" },
-        { g: "다이아", w: 1, v: 10, up: "dia" },
-      ];
-      const cleanIcon = (x) => {
-        const r2 = Math.round(x * 100) / 100;
-        return Math.abs(x - r2) < 1e-9
-          ? '<span style="color:var(--green)">✓</span>'
-          : '<span style="color:var(--red)">✗ ' + x.toFixed(5) + "</span>";
-      };
-      function renderGrades() {
-        const share = ljPGem; // 보석이 나올 확률
-        $("ljGemShare").textContent = (share * 100).toFixed(2) + "%";
-        const diaLv = Math.max(0, Number($("ljDiaLv").value) || 0);
-        const platLv = Math.max(0, Number($("ljPlatLv").value) || 0);
-        const wSum = LJ_GRADES.reduce((s, x) => s + x.w, 0);
-        // 별도추첨(권장): 보석 등급 풀은 그대로(합 wSum). 업글은 보석내 +0.01%p.
-        let evIn = 0, evUp = 0;
-        const bodyRows = LJ_GRADES.map((x) => {
-          const baseIn = (x.w / wSum) * 100; // 보석내 %
-          const upPP = x.up === "dia" ? diaLv * 0.01 : x.up === "plat" ? platLv * 0.01 : 0;
-          const maxIn = baseIn + upPP; // 최대 업글 시 보석내 %
-          const overall = baseIn * share; // 전체상자 %
-          evIn += (baseIn / 100) * x.v;
-          evUp += (maxIn / 100) * x.v;
-          return (
-            "<tr style='border-top:1px solid var(--grey200)'>" +
-            "<td style='padding:5px 6px;font-weight:600'>" + x.g + "</td>" +
-            "<td style='padding:5px 6px;text-align:right'>" + x.w + "</td>" +
-            "<td style='padding:5px 6px;text-align:right'>" + baseIn.toFixed(2) + "%</td>" +
-            "<td style='padding:5px 6px;text-align:right;color:var(--grey500)'>" + overall.toFixed(3) + "%</td>" +
-            "<td style='padding:5px 6px;text-align:right'>" + (upPP > 0 ? "+" + upPP.toFixed(2) + "%p" : "–") + "</td>" +
-            "<td style='padding:5px 6px;text-align:right'>" + maxIn.toFixed(2) + "%</td>" +
-            "<td style='padding:5px 6px;text-align:center'>" + cleanIcon(maxIn) + "</td>" +
-            "</tr>"
-          );
-        });
-        $("ljGradeTbl").innerHTML =
-          "<thead><tr style='color:var(--grey500);font-size:12px'>" +
-          "<th style='padding:4px 6px;text-align:left'>등급</th>" +
-          "<th style='padding:4px 6px;text-align:right'>비중</th>" +
-          "<th style='padding:4px 6px;text-align:right'>보석내 확률</th>" +
-          "<th style='padding:4px 6px;text-align:right'>전체상자</th>" +
-          "<th style='padding:4px 6px;text-align:right'>업글/최대</th>" +
-          "<th style='padding:4px 6px;text-align:right'>최대적용</th>" +
-          "<th style='padding:4px 6px;text-align:center'>2자리</th>" +
-          "</tr></thead><tbody>" + bodyRows.join("") + "</tbody>";
-        // 단일 풀 모델의 위험 경고: 조각+보석을 한 풀에 넣으면 업글 0.01 weight가 몇 %p 되나
-        const fragTotalW = LJ_GEM + LJ_COMMON * 4 + LJ_RARE; // 대략(현재 기본값 기준)
-        const singleUpPP = (0.01 / fragTotalW) * 100;
+          " · 완성=희귀 보석 " + won(prize) + "원(평소 보석의 약 " + gemMult + "배)</span>";
         $("ljGradeNote").innerHTML =
-          '<div style="padding:8px 10px;background:var(--green50,#e8f6ee);border-radius:8px;margin-bottom:8px">' +
-          "✅ <b>권장: 2단 추첨</b> — ① 보석/조각 먼저 정함 → ② 보석이면 아래 등급 풀(합 " + wSum +
-          ")로 추첨. 등급 풀이 합 100 그대로라 업글 <b>+0.01%p가 정확히 2자리로 딱 떨어져요</b>. " +
-          "조각을 넣어도 등급표·업글은 <b>손댈 필요 없음</b>. 전체 EV만 보석확률(" + (share * 100).toFixed(2) +
-          "%)만큼 줄어요. 보석내 EV " + evIn.toFixed(3) + "원 → 최대업글 " + evUp.toFixed(3) + "원." +
-          "</div>" +
-          '<div style="padding:8px 10px;background:var(--red50,#fdecec);border-radius:8px">' +
-          "⚠️ <b>단일 풀(비추천)</b> — 조각·보석을 한 weight 풀(합 " + fragTotalW.toLocaleString() +
-          ")에 섞으면, 업글 0.01 weight가 <b>" + singleUpPP.toFixed(5) + "%p</b>가 돼서 2자리로 안 떨어져요. " +
-          "이 방식이면 업글 증가폭을 " + (fragTotalW / 10000).toFixed(4) + " weight로 바꿔야 0.01%p가 유지돼요." +
+          '<div style="padding:8px 10px;background:var(--grey50,#f7f8fa);border-radius:8px;font-size:12px;color:var(--grey600)">' +
+          "고지 확률은 위 표 그대로(합 100%). <b>내부는 2단 추첨</b>: ① 조각 전체 " + fragPct.toFixed(2) +
+          "% vs 보석 " + (100 - fragPct).toFixed(2) + "% → ② 보석이면 등급 풀(동화~다이아)로. " +
+          "다이아·백금은 업글로 +0.01%p씩 오르고 동화가 차감해 <b>합 100% 유지</b>. 업글해도 2자리 정합 " +
+          (clean2(sumMax) ? "✓ 유지" : "✗ 깨짐") + "돼요." +
           "</div>";
       }
 
       ["ljCount"].forEach((id) => $(id).addEventListener("input", buildLj));
-      ["ljPrize", "ljGemEv", "ljTarget", "ljOpens", "ljPool"].forEach((id) =>
+      ["ljPrize", "ljOpens", "ljPool", "ljDiaLv", "ljPlatLv"].forEach((id) =>
         $(id).addEventListener("input", calcLj),
       );
-      ["ljDiaLv", "ljPlatLv"].forEach((id) => $(id).addEventListener("input", renderGrades));
+      buildGradeTbl();
       buildLj();
     </script>
   </body>
