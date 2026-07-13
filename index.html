@@ -146,6 +146,12 @@
             총 오픈된 상자 수 <b id="cTotalOpens">0개</b>
             <span style="color: var(--grey400)">(하루 평균 <b id="cDailyOpens">0개</b>)</span>
           </div>
+          <div style="font-size: 13px; color: var(--grey600); margin-bottom: 10px">
+            🪨 원석(방전) 발행 <b id="cOreDrawn">0개</b>
+            <span style="color: var(--grey400)">(≈<b id="cOreValue">0원</b>어치 · 개당 0.1원)</span>
+            · 제련 <b id="cOreSmelted">0개</b>
+            <span style="color: var(--grey400)">(동화 지급)</span>
+          </div>
           <div class="kpis">
             <div class="kpi"><div class="n" id="kUsers">0</div><div class="l">유저 수</div><div class="s" id="kDau">오늘 0 · 어제 0</div><div class="s" id="kWauMau">7일 0 · 30일 0</div></div>
             <div class="kpi"><div class="n" id="kAvgOpen">0</div><div class="l">유저당 평균 오픈 (일 평균)</div><div class="s" id="kAvgOpenExcl">최다 제외 0 (0)</div></div>
@@ -910,6 +916,10 @@
           const drawn = Number(d.totalDrawnValue) || 0;
           $("cTotal").textContent = won(drawn) + "원";
           $("cDailyValue").textContent = won(d.dailyTotalValue) + "원";
+          const oreDrawn = Number(d.oreDrawn) || 0;
+          $("cOreDrawn").textContent = oreDrawn.toLocaleString() + "개";
+          $("cOreValue").textContent = won(Math.round(oreDrawn * 0.1 * 10) / 10) + "원";
+          $("cOreSmelted").textContent = (Number(d.oreSmelted) || 0).toLocaleString() + "개";
           $("cTotalOpens").textContent =
             (Number(d.totalDrawnCount) || 0).toLocaleString() + "개";
           $("cDailyOpens").textContent =
