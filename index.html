@@ -293,10 +293,20 @@
       <!-- 보석 가치 계산기 (등장확률 → 상자 1회당 EV) -->
       <div class="card">
         <h2>💎 보석 가치 계산기 <span style="font-size: 12px; color: var(--grey400); font-weight: 400">등장 확률 → 상자 1회당 기대 보석 가치</span></h2>
+        <div class="row" style="margin-bottom: 8px">
+          <div>
+            <label>탈진 단계 (원석은 지침·방전에서만 등장)</label>
+            <select id="gemStage">
+              <option value="0">✨ 정상 (하루 1~80개)</option>
+              <option value="1">😮‍💨 지침 (81~120개)</option>
+              <option value="2">🥴 방전 (121개~)</option>
+            </select>
+          </div>
+        </div>
         <div id="gemCalc"></div>
         <div id="gemCalcResult" style="margin-top: 12px; font-size: 15px; color: var(--grey800)"></div>
         <button id="gemReset" type="button" style="margin-top: 10px; width: auto; padding: 8px 14px; font-size: 13px; background: var(--grey200); color: var(--grey800)">서버 값으로 초기화</button>
-        <div class="note" style="margin-top: 8px">각 등급의 등장 확률(%)과 가치(원)를 넣으면 상자 1회당 기대 가치(EV)를 계산해요. 이 값을 위 출금 시뮬의 '보석 평균가치'에 넣어 쓰면 돼요. '서버 값으로 초기화'는 불러오기한 실제 서버 등급값으로 되돌려요(미로드 시 기본값).</div>
+        <div class="note" style="margin-top: 8px">각 등급의 등장 확률(%)과 가치(원)를 넣으면 상자 1회당 기대 가치(EV)를 계산해요. 이 값을 위 출금 시뮬의 '보석 평균가치'에 넣어 쓰면 돼요. <b>원석</b>은 제련(10개 → 동화 1개)이라 개당 0.1원으로 잡아요. 단계를 바꾸면 서버 <code>fatigue_grades</code> 확률이 자동으로 채워져요(불러오기 전엔 기본값). '서버 값으로 초기화'는 현재 선택한 단계의 서버값으로 되돌려요.</div>
       </div>
 
       <!-- 희귀 보석 조각 시뮬레이터 (유저 고지 확률 기준) · 아직 계획중 — 맨 아래 배치 -->
@@ -550,11 +560,21 @@
         { name: "금화", prob: 10, value: 3 },
         { name: "백금", prob: 7, value: 5 },
         { name: "다이아", prob: 3, value: 10 },
+        // 원석: 지침·방전에서 보석 대신 나와요. 제련 10개 → 동화 1개(1원)라 개당 0.1원.
+        { name: "원석", prob: 0, value: 0.1 },
         // 꽝(0원): 서버 등급(동화~다이아, 인덱스 0~4)과 매핑이 어긋나지 않게 항상 맨 끝.
         // 기본 확률 0이라 EV에 영향 없고, 꽝 확률을 넣으면 그만큼 기대가치가 낮아져요.
         { name: "꽝", prob: 0, value: 0 },
       ];
-      let serverGems = null; // 불러오기로 받은 서버 실제 등급값
+      // gem_grades 의 sort_order 순서(= GEM_EV 인덱스 0~4)와 서버 grade 키 매핑. 5번은 원석.
+      const GEM_KEYS = ["bronze", "silver", "gold", "platinum", "diamond", "iron"];
+      let serverGems = null; // 불러오기로 받은 서버 실제 등급값(정상 단계)
+      let serverFatigue = null; // 불러오기로 받은 서버 fatigue_config
+      // 서버 fatigue_grades 기본값(미로드 시 폴백). schema.sql 과 동일하게 유지.
+      const DEFAULT_FATIGUE_GRADES = {
+        1: { iron: 30, bronze: 44.5, silver: 19, gold: 5, platinum: 1, diamond: 0.5 },
+        2: { iron: 60, bronze: 29, silver: 9, gold: 2, platinum: 0, diamond: 0 },
+      };
       function buildGemCalc() {
         const el = $("gemCalc");
         el.innerHTML = "";
@@ -586,29 +606,60 @@
         });
         calcGemEv();
       }
-      function applyGemValues(list) {
-        list.forEach((g, i) => {
-          if ($("gp" + i)) $("gp" + i).value = Math.round((Number(g.prob) || 0) * 100) / 100;
-          if ($("gv" + i)) $("gv" + i).value = Number(g.value) || 0;
+      // 단계 선택지 라벨의 구간(하루 오픈수)을 서버 fatigue_thresholds 로 갱신해요.
+      function gemStageLabels() {
+        const t = (serverFatigue && serverFatigue.thresholds) || {};
+        const t1 = Number(t["1"]) || 80;
+        const t2 = Number(t["2"]) || 120;
+        const opts = $("gemStage").options;
+        opts[0].textContent = "✨ 정상 (하루 1~" + t1 + "개)";
+        opts[1].textContent = "😮‍💨 지침 (" + (t1 + 1) + "~" + t2 + "개)";
+        opts[2].textContent = "🥴 방전 (" + (t2 + 1) + "개~)";
+      }
+      // 선택한 탈진 단계의 서버 확률로 표를 채워요.
+      // 가치(원)는 단계와 무관하니 항상 gem_grades 기준(원석 0.1원, 꽝 0원)이에요.
+      function applyGemStage() {
+        const stage = Number($("gemStage").value) || 0;
+        const base = serverGems || GEM_EV;
+        const fg =
+          stage === 0
+            ? null
+            : (serverFatigue && serverFatigue.grades && serverFatigue.grades[stage]) ||
+              DEFAULT_FATIGUE_GRADES[stage];
+        GEM_EV.forEach((g, i) => {
+          if (!$("gp" + i)) return;
+          const b = base[i];
+          const value = i <= 4 && b ? Number(b.value) || 0 : g.value;
+          let prob;
+          if (fg) prob = i <= 5 ? Number(fg[GEM_KEYS[i]]) || 0 : 0; // 지침·방전: 서버 확률표
+          else prob = i <= 4 && b ? Number(b.prob) || 0 : 0; // 정상: gem_grades 가중치
+          $("gp" + i).value = Math.round(prob * 100) / 100;
+          $("gv" + i).value = value;
         });
         calcGemEv();
       }
       function calcGemEv() {
-        let ev = 0, ptot = 0;
+        let ev = 0, ptot = 0, oreEv = 0;
         GEM_EV.forEach((_, i) => {
           const p = Number($("gp" + i).value) || 0;
           const v = Number($("gv" + i).value) || 0;
           const contrib = (p / 100) * v;
           ev += contrib;
           ptot += p;
+          if (GEM_KEYS[i] === "iron") oreEv = contrib;
           $("gc" + i).textContent = contrib.toFixed(3) + "원";
         });
         const warn =
           Math.abs(ptot - 100) > 0.01
             ? ' <span style="color:var(--red)">(확률 합 ' + ptot.toFixed(1) + "% ≠ 100%)</span>"
             : ' <span style="color:var(--grey400)">(확률 합 ' + ptot.toFixed(1) + "%)</span>";
+        // 원석이 섞인 단계는 보석분 / 원석분을 나눠 보여줘요(원석은 제련해야 포인트가 돼요).
+        const split = oreEv
+          ? ' <span style="color:var(--grey600);font-size:13px">= 보석 ' +
+            (ev - oreEv).toFixed(3) + "원 + 원석 " + oreEv.toFixed(3) + "원</span>"
+          : "";
         $("gemCalcResult").innerHTML =
-          "상자 1회당 기대 가치 <b>" + ev.toFixed(3) + "원</b>" + warn;
+          "상자 1회당 기대 가치 <b>" + ev.toFixed(3) + "원</b>" + warn + split;
       }
 
       // 크로스프로모션 앱 코드 → 친숙한 이름(앱 config와 동기화). 없으면 코드 그대로.
@@ -1016,8 +1067,13 @@
               prob: sum ? (Number(g.weight) / sum) * 100 : 0,
               value: Number(g.value) || 0,
             }));
-            applyGemValues(serverGems);
           }
+          // 탈진 확률표(서버 fatigue_grades). 없으면 계산기는 기본값으로 동작해요.
+          if (d.fatigueGrades && Object.keys(d.fatigueGrades).length) {
+            serverFatigue = { grades: d.fatigueGrades, thresholds: d.fatigueThresholds || {} };
+            gemStageLabels();
+          }
+          applyGemStage();
 
           // 시뮬레이션 자동 세팅: eCPM=불러오기 값, 오픈수·업글횟수=유저 평균
           const rct = d.recoupByType || {};
@@ -1329,9 +1385,9 @@
       );
       renderSim();
       buildGemCalc();
-      $("gemReset").addEventListener("click", () =>
-        applyGemValues(serverGems || GEM_EV),
-      );
+      $("gemStage").addEventListener("change", applyGemStage);
+      $("gemReset").addEventListener("click", applyGemStage);
+      applyGemStage();
 
       // ── 보석 등급 · 조각 확률 설계 (유저 고지 확률 기준) ───────
       // 고지 확률(%) = 전체 상자 기준. 등급들 + 조각(전체)이 합 100%.
