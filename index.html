@@ -290,6 +290,14 @@
         </div>
       </div>
 
+      <!-- 탈진 단계 도달 추이 (확률 조정 효과 추적) -->
+      <div class="card">
+        <h2>😮‍💨 탈진 단계 도달 <span id="fatHead" style="font-size: 12px; color: var(--grey400); font-weight: 400">일자별 지침·방전 진입 유저 수</span></h2>
+        <div style="overflow-x: auto"><table id="fatTbl" style="width:100%;border-collapse:collapse;font-size:13px"></table></div>
+        <div id="fatMsg" class="note" style="margin-top: 8px">불러오기를 눌러주세요.</div>
+        <div class="note" style="margin-top: 6px">그날 <b>완료한 오픈수</b>가 임계값을 넘긴 유저 수예요(임계값은 서버 <code>fatigue_thresholds</code>). 방전 도달 = 체리피커가 아니에요 — 열쇠 자연 충전만으로도 닿는 수치라 순수 헤비 유저가 섞여 있어요. 위 '봇 의심 유저'와 교차해서 보세요. <code>daily_active.opens</code> 집계는 2026-07-09부터라 그 이전은 0으로 나와요.</div>
+      </div>
+
       <!-- 보석 가치 계산기 (등장확률 → 상자 1회당 EV) -->
       <div class="card">
         <h2>💎 보석 가치 계산기 <span style="font-size: 12px; color: var(--grey400); font-weight: 400">등장 확률 → 상자 1회당 기대 보석 가치</span></h2>
@@ -606,6 +614,47 @@
         });
         calcGemEv();
       }
+      // 탈진 단계 도달 추이: 일자별 지침·방전 진입 유저 수 + DAU 대비 비율.
+      function renderFatigue(rows) {
+        const list = Array.isArray(rows) ? rows.slice().reverse() : []; // 최신이 위로
+        if (!list.length) {
+          $("fatTbl").innerHTML = "";
+          $("fatMsg").textContent = "데이터 없음(opens 집계 이전 기간이거나 활성 유저 없음).";
+          return;
+        }
+        const t = (serverFatigue && serverFatigue.thresholds) || {};
+        const t1 = Number(t["1"]) || 80;
+        const t2 = Number(t["2"]) || 120;
+        $("fatHead").textContent = "지침 " + (t1 + 1) + "개+ · 방전 " + (t2 + 1) + "개+";
+        const pct = (n, d) => (d ? (n / d) * 100 : 0);
+        const th =
+          "<tr style='color:var(--grey400);font-size:12px;text-align:right'>" +
+          "<th style='padding:4px 6px;text-align:left'>날짜</th><th style='padding:4px 6px'>DAU</th>" +
+          "<th style='padding:4px 6px'>😮‍💨 지침+</th><th style='padding:4px 6px'>지침%</th>" +
+          "<th style='padding:4px 6px'>🥴 방전+</th><th style='padding:4px 6px'>방전%</th></tr>";
+        const body = list
+          .map((r) => {
+            const dau = Number(r.dau) || 0;
+            const s1 = Number(r.stage1) || 0;
+            const s2 = Number(r.stage2) || 0;
+            const p2 = pct(s2, dau);
+            // 방전 비중이 높을수록 경고색 — 확률 조정 효과를 눈으로 보려고.
+            const c2 = p2 >= 15 ? "var(--red)" : p2 >= 8 ? "#c47f17" : "var(--grey800)";
+            return (
+              "<tr style='border-top:1px solid var(--grey200);text-align:right'>" +
+              "<td style='padding:5px 6px;text-align:left'>" + r.date + "</td>" +
+              "<td style='padding:5px 6px'>" + dau.toLocaleString() + "</td>" +
+              "<td style='padding:5px 6px'>" + s1.toLocaleString() + "</td>" +
+              "<td style='padding:5px 6px;color:var(--grey600)'>" + pct(s1, dau).toFixed(1) + "%</td>" +
+              "<td style='padding:5px 6px;color:" + c2 + ";font-weight:600'>" + s2.toLocaleString() + "</td>" +
+              "<td style='padding:5px 6px;color:" + c2 + "'>" + p2.toFixed(1) + "%</td></tr>"
+            );
+          })
+          .join("");
+        $("fatTbl").innerHTML = th + body;
+        $("fatMsg").textContent = "맨 윗줄(오늘)은 진행 중이라 아직 낮게 나와요.";
+      }
+
       // 단계 선택지 라벨의 구간(하루 오픈수)을 서버 fatigue_thresholds 로 갱신해요.
       function gemStageLabels() {
         const t = (serverFatigue && serverFatigue.thresholds) || {};
@@ -1074,6 +1123,7 @@
             gemStageLabels();
           }
           applyGemStage();
+          renderFatigue(d.fatigueDaily);
 
           // 시뮬레이션 자동 세팅: eCPM=불러오기 값, 오픈수·업글횟수=유저 평균
           const rct = d.recoupByType || {};
