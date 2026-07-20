@@ -563,13 +563,13 @@
       // 보석 가치 계산기: 등급별 확률(%)·가치(원) → 상자 1회당 기대 가치(EV)
       // 기본값(라이브 서버 gem_grades 기준). 불러오기 시 실제 서버값으로 갱신됨.
       const GEM_EV = [
-        { name: "동화", prob: 45, value: 1 },
-        { name: "은화", prob: 35, value: 2 },
-        { name: "금화", prob: 10, value: 3 },
-        { name: "백금", prob: 7, value: 5 },
-        { name: "다이아", prob: 3, value: 10 },
+        { name: "동화", prob: 42, value: 1 },
+        { name: "은화", prob: 20, value: 2 },
+        { name: "금화", prob: 5, value: 3 },
+        { name: "백금", prob: 2, value: 5 },
+        { name: "다이아", prob: 1, value: 10 },
         // 원석: 지침·방전에서 보석 대신 나와요. 제련 10개 → 동화 1개(1원)라 개당 0.1원.
-        { name: "원석", prob: 0, value: 0.1 },
+        { name: "원석", prob: 30, value: 0.1 },
         // 꽝(0원): 서버 등급(동화~다이아, 인덱스 0~4)과 매핑이 어긋나지 않게 항상 맨 끝.
         // 기본 확률 0이라 EV에 영향 없고, 꽝 확률을 넣으면 그만큼 기대가치가 낮아져요.
         { name: "꽝", prob: 0, value: 0 },
@@ -678,10 +678,12 @@
         GEM_EV.forEach((g, i) => {
           if (!$("gp" + i)) return;
           const b = base[i];
+          // 가치(원): 코인은 서버값, 원석(i=5)은 항상 0.1원(제련가), 꽝은 0.
           const value = i <= 4 && b ? Number(b.value) || 0 : g.value;
           let prob;
           if (fg) prob = i <= 5 ? Number(fg[GEM_KEYS[i]]) || 0 : 0; // 지침·방전: 서버 확률표
-          else prob = i <= 4 && b ? Number(b.prob) || 0 : 0; // 정상: gem_grades 가중치
+          // 정상: gem_grades 가중치(이제 원석 i=5 포함). 서버값(serverGems)에서 읽어요.
+          else prob = i <= 5 && b ? Number(b.prob) || 0 : 0;
           $("gp" + i).value = Math.round(prob * 100) / 100;
           $("gv" + i).value = value;
         });
