@@ -489,7 +489,34 @@
         const evBoost =
           (diaBoostPP / 100) * (vDia - vBronze) + (platBoostPP / 100) * (vPlat - vBronze);
         const evBase = Number($("simEV").value) || 0;
-        const ev = evBase + evBoost; // 유효 보석 평균가치(최대치 업글 반영)
+        const ev = evBase + evBoost; // 정상 단계 보석 평균가치(최대치 업글 반영)
+
+        // ── 탈진 단계 반영: 하루 오픈수를 정상/지침/방전으로 쪼개 단계별 EV로 계산 ──
+        //   정상 = 입력한 보석가치(ev), 지침·방전 = 서버 fatigue_grades × 보석값 + 원석0.1원.
+        //   업글 부스트(evBoost)는 모든 단계에 동일하게 더해요(서버 open_chest와 동일).
+        const thr = (serverFatigue && serverFatigue.thresholds) || DEFAULT_FATIGUE_THRESHOLDS;
+        const t1 = Number(thr[1] ?? thr["1"]) || DEFAULT_FATIGUE_THRESHOLDS[1];
+        const t2 = Number(thr[2] ?? thr["2"]) || DEFAULT_FATIGUE_THRESHOLDS[2];
+        const fgOf = (st) =>
+          (serverFatigue && serverFatigue.grades && serverFatigue.grades[st]) ||
+          DEFAULT_FATIGUE_GRADES[st];
+        // 단계 확률표(fg) → 상자 1회 기대값(보석 + 원석 0.1원). 업글 부스트 제외분.
+        const stageEvBase = (fg) => {
+          if (!fg) return ev;
+          const coinVal = [vBronze, Number((gvals[1] || {}).value) || 2,
+            Number((gvals[2] || {}).value) || 3, vPlat, vDia];
+          const keys = ["bronze", "silver", "gold", "platinum", "diamond"];
+          let e = 0;
+          keys.forEach((k, i) => { e += ((Number(fg[k]) || 0) / 100) * coinVal[i]; });
+          e += ((Number(fg.iron) || 0) / 100) * 0.1; // 원석 제련가
+          return e + evBoost;
+        };
+        const evJichim = stageEvBase(fgOf(1));
+        const evBangjeon = stageEvBase(fgOf(2));
+        // 오픈수 분할: 정상 1..t1, 지침 t1+1..t2, 방전 t2+1..
+        const nNormal = Math.min(opens, t1);
+        const nJichim = Math.min(Math.max(opens - t1, 0), Math.max(t2 - t1, 0));
+        const nBangjeon = Math.max(opens - t2, 0);
 
         const keySink = catSink(keyCapCost, KEY_START, keyN);
         const bagSink = catSink(bagCost, 10, bagN);
@@ -501,7 +528,10 @@
         $("simKeyCost").textContent = "×" + keyN + " · 소모 " + won(keySink) + "원";
         $("simBagCost").textContent = "소모 " + won(bagSink) + "원";
         $("simDailyCost").textContent = "×" + dailyN + " · 소모 " + won(dailySink) + "원";
-        const perDay = opens * ev;
+        // 하루 획득 = 단계별 오픈수 × 단계별 EV (탈진 반영). 평균 EV는 출금광고 계산에 써요.
+        const perDay =
+          nNormal * ev + nJichim * evJichim + nBangjeon * evBangjeon;
+        const avgEv = opens > 0 ? perDay / opens : ev;
         const bagCap = 10 + bagN; // 가방 칸 = 기본 10 + 확장
         const refillAdsPerDay = keyAdsPerDay + gemAdsPerDay; // 열쇠+보석 리필 광고 뷰/일
         const ecpmV = ecpm / 1000;
@@ -509,7 +539,7 @@
         for (let d = 1; d <= days; d++) {
           const p = Math.max(0, d * perDay - sink);
           const oAds = d * opens; // 오픈 광고(누적) = 오픈당 1회
-          const wAds = ev > 0 ? p / (ev * bagCap) : 0; // 출금 광고(누적) = 출금액/(평균가치×가방칸)
+          const wAds = avgEv > 0 ? p / (avgEv * bagCap) : 0; // 출금 광고(누적) = 출금액/(평균가치×가방칸)
           const rAds = d * refillAdsPerDay; // 리필 광고(누적)
           const a = (oAds + wAds + rAds) * ecpmV;
           payout.push(p); adRev.push(a); net.push(a - p);
@@ -524,11 +554,18 @@
             : "") +
           "필요 업글 🔑열쇠 <b>×" + keyN + "</b>(최대 " + needKeyCap + ") · 💎보석 <b>×" +
           dailyN + "</b>(최대 " + needGemCap + ") · 🎒가방 ×" + bagN +
-          "<br>보석가치 <b>" + ev.toFixed(3) + "원</b> (base " + evBase.toFixed(2) +
+          "<br>정상 보석가치 <b>" + ev.toFixed(3) + "원</b> (base " + evBase.toFixed(2) +
           (evBoost > 0
             ? " + 업글 <span style=\"color:var(--green)\">+" + evBoost.toFixed(3) + "</span>"
             : "") +
           " · 다이아+" + diaBoostPP.toFixed(2) + "%p·백금+" + platBoostPP.toFixed(2) + "%p)" +
+          // 탈진 단계 분할: 오픈이 임계값을 넘으면 지침·방전 EV로 계산돼요.
+          (nJichim + nBangjeon > 0
+            ? "<br>🔋 단계 분할 정상 <b>" + nNormal + "</b>회(" + ev.toFixed(2) +
+              "원) · 😮‍💨지침 <b>" + nJichim + "</b>회(" + evJichim.toFixed(2) +
+              "원) · 🥴방전 <b>" + nBangjeon + "</b>회(" + evBangjeon.toFixed(2) +
+              "원) → 평균 <b>" + avgEv.toFixed(3) + "원</b>"
+            : "") +
           "<br>업글 소모 <b>" + won(sink) + "원</b> · " + days + "일: 출금 <b>" +
           won(payout[last]) + "원</b> · 광고수익 <b>" + won(adRev[last]) +
           "원</b> · 순손익 <b style=\"color:" +
@@ -578,11 +615,12 @@
       const GEM_KEYS = ["bronze", "silver", "gold", "platinum", "diamond", "iron"];
       let serverGems = null; // 불러오기로 받은 서버 실제 등급값(정상 단계)
       let serverFatigue = null; // 불러오기로 받은 서버 fatigue_config
-      // 서버 fatigue_grades 기본값(미로드 시 폴백). schema.sql 과 동일하게 유지.
+      // 서버 fatigue_grades/thresholds 기본값(미로드 시 폴백). schema.sql 과 동일하게 유지.
       const DEFAULT_FATIGUE_GRADES = {
-        1: { iron: 30, bronze: 44.5, silver: 19, gold: 5, platinum: 1, diamond: 0.5 },
-        2: { iron: 60, bronze: 29, silver: 9, gold: 2, platinum: 0, diamond: 0 },
+        1: { iron: 80, bronze: 11, silver: 5, gold: 3, platinum: 1, diamond: 0 },
+        2: { iron: 90, bronze: 4, silver: 3, gold: 2, platinum: 1, diamond: 0 },
       };
+      const DEFAULT_FATIGUE_THRESHOLDS = { 1: 40, 2: 80 };
       function buildGemCalc() {
         const el = $("gemCalc");
         el.innerHTML = "";
@@ -623,8 +661,8 @@
           return;
         }
         const t = (serverFatigue && serverFatigue.thresholds) || {};
-        const t1 = Number(t["1"]) || 80;
-        const t2 = Number(t["2"]) || 120;
+        const t1 = Number(t["1"]) || DEFAULT_FATIGUE_THRESHOLDS[1];
+        const t2 = Number(t["2"]) || DEFAULT_FATIGUE_THRESHOLDS[2];
         $("fatHead").textContent = "지침 " + (t1 + 1) + "개+ · 방전 " + (t2 + 1) + "개+";
         const pct = (n, d) => (d ? (n / d) * 100 : 0);
         const th =
@@ -658,8 +696,8 @@
       // 단계 선택지 라벨의 구간(하루 오픈수)을 서버 fatigue_thresholds 로 갱신해요.
       function gemStageLabels() {
         const t = (serverFatigue && serverFatigue.thresholds) || {};
-        const t1 = Number(t["1"]) || 80;
-        const t2 = Number(t["2"]) || 120;
+        const t1 = Number(t["1"]) || DEFAULT_FATIGUE_THRESHOLDS[1];
+        const t2 = Number(t["2"]) || DEFAULT_FATIGUE_THRESHOLDS[2];
         const opts = $("gemStage").options;
         opts[0].textContent = "✨ 정상 (하루 1~" + t1 + "개)";
         opts[1].textContent = "😮‍💨 지침 (" + (t1 + 1) + "~" + t2 + "개)";
