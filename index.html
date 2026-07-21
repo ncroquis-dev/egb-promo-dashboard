@@ -200,6 +200,20 @@
           <div class="note" style="margin-top: 6px">※ DAU는 오늘부터 정확. 이전 날짜는 백필(마지막 활동일 기준)이라 과소일 수 있어요. 상자 오픈 수는 집계 시작 이후부터 기록돼요(오픈 수는 값이 커서 우측 축 기준).</div>
         </div>
 
+        <!-- 일일 수지: 지급·출금 포인트 · 광고 시청 · 예상 광고수입 -->
+        <div class="card">
+          <h2>💰 일일 수지 <span style="font-size: 12px; color: var(--grey400); font-weight: 400">지급·출금 포인트 · 광고 예상수입</span></h2>
+          <div id="revSummary" style="font-size: 13px; color: var(--grey600); margin-bottom: 4px"></div>
+          <div id="revChart" style="overflow-x: auto"></div>
+          <div class="flowleg" style="margin-top: 6px">
+            <span><span class="dot" style="background: #f04452"></span>지급 포인트(원)</span>
+            <span><span class="dot" style="background: #f59e0b"></span>출금 포인트(원)</span>
+            <span><span class="dot" style="background: #15b877"></span>광고 예상수입(원)</span>
+            <span><span class="dot" style="background: #3182f6"></span>광고 시청(우측 축)</span>
+          </div>
+          <div class="note" style="margin-top: 6px">※ 광고 예상수입 = 광고 시청 수 × eCPM ÷ 1000 (상단 eCPM 입력값 사용, 바꾸면 즉시 반영). 광고 시청 수는 <b>상자 오픈(오픈당 1회) + 출금(출금당 1회)</b>로 집계해요 — 열쇠/보석 충전 광고(하루 최대 4회/인)는 로그가 없어 제외돼요(실제 수입은 이보다 조금 높음). 지급 포인트는 뽑힌 보석 총가치(원), 출금 포인트는 실제 토스포인트 출금액(원)이에요.</div>
+        </div>
+
         <!-- 보석 등급별 -->
         <div class="card">
           <h2>💠 등급별 꺼낸 보석 수</h2>
@@ -879,6 +893,73 @@
         });
       }
 
+      // 일일 수지: 지급 포인트·출금 포인트·광고 예상수입(원, 좌축) + 광고 시청 수(건, 우축).
+      //   광고 시청 = 오픈(오픈당 1회) + 출금(출금당 1회). 예상수입 = 시청 × eCPM ÷ 1000.
+      //   데이터는 불러오기로 받아 전역에 보관 → eCPM 바꾸면 재계산해요.
+      let revData = null; // { dates, paid[], withdrawn[], adViews[] }
+      function renderRevenue(paidList, withdrawnList, opensList) {
+        const paid = Array.isArray(paidList) ? paidList : [];
+        if (paid.length) {
+          const wdMap = {}, opMap = {};
+          (Array.isArray(withdrawnList) ? withdrawnList : []).forEach(
+            (x) => (wdMap[x.date] = x),
+          );
+          (Array.isArray(opensList) ? opensList : []).forEach(
+            (x) => (opMap[x.date] = Number(x.count) || 0),
+          );
+          const dates = paid.map((x) => x.date);
+          revData = {
+            dates,
+            paid: paid.map((x) => Number(x.value) || 0),
+            withdrawn: paid.map((x) => Number((wdMap[x.date] || {}).amount) || 0),
+            // 광고 시청 = 상자 오픈 + 출금 건수(둘 다 광고 1회 트리거)
+            adViews: paid.map(
+              (x) =>
+                (opMap[x.date] || 0) +
+                (Number((wdMap[x.date] || {}).count) || 0),
+            ),
+          };
+        }
+        drawRevenue();
+      }
+      function drawRevenue() {
+        if (revData == null) return;
+        const ecpm = Number($("ecpm").value) || 0;
+        const revenue = revData.adViews.map((v) => (v * ecpm) / 1000);
+        const dates = revData.dates;
+        const sum = (a) => a.reduce((s, v) => s + v, 0);
+        const paidTot = sum(revData.paid),
+          wdTot = sum(revData.withdrawn),
+          revTot = sum(revenue),
+          adTot = sum(revData.adViews);
+        const net = revTot - paidTot;
+        $("revSummary").innerHTML =
+          "최근 " + dates.length + "일 · 지급 <b>" + won(paidTot) +
+          "원</b> · 출금 <b>" + won(wdTot) + "원</b> · 광고 <b>" +
+          adTot.toLocaleString() + "회</b> · 예상수입 <b>" + won(revTot) +
+          "원</b> · 순(수입−지급) <b style=\"color:" +
+          (net >= 0 ? "var(--green)" : "var(--red)") + "\">" + won(net) + "원</b>";
+        lineChart(
+          $("revChart"),
+          dates.length,
+          [
+            { color: "#f04452", data: revData.paid },
+            { color: "#f59e0b", data: revData.withdrawn },
+            { color: "#15b877", data: revenue },
+            { color: "#3182f6", data: revData.adViews, scaleOwn: true },
+          ],
+          (v) => Math.round(v).toLocaleString(),
+          dates,
+          true,
+        );
+        const rc = $("revChart");
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            rc.scrollLeft = rc.scrollWidth;
+          });
+        });
+      }
+
       function renderTopPie(topUsers, total) {
         const tu = Array.isArray(topUsers) ? topUsers : [];
         const COLORS = ["#3182f6", "#15b877", "#f59e0b", "#f04452", "#8b5cf6"];
@@ -1148,6 +1229,7 @@
             (wd ? (cons / wd) * 100 : 0).toFixed(2) + "%";
           recoupTypes(d.recoupByType || {}, users, rangeMode);
           renderTrend(d.nruDaily, d.dauDaily, d.opensDaily);
+          renderRevenue(d.paidDaily, d.withdrawnDaily, d.opensDaily);
           // 보석 계산기: 서버 실제 등급값 반영(확률 = weight/합계×100)
           if (Array.isArray(d.gemGrades) && d.gemGrades.length) {
             const sum = d.gemGrades.reduce((s, g) => s + (Number(g.weight) || 0), 0);
@@ -1261,6 +1343,8 @@
       }
 
       $("load").addEventListener("click", load);
+      // eCPM 바꾸면 일일 수지의 예상수입 라인을 즉시 다시 계산해요(불러오기 없이).
+      $("ecpm").addEventListener("input", drawRevenue);
 
       // 기간 롤업 데이터가 유효해지는 첫 날(첫 온전한 날). 이 이전은 획득/소모가 부분/0이라 시작일로 못 고르게 막아요.
       // (전체 보기는 예외 — 누적 전체기간 지표라 제약 없음)
